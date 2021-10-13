@@ -1,4 +1,4 @@
-// scripts/index.js
+// this file shows how to interact with smart contract programatically
 import { ethers } from "hardhat";
 async function main() {
   // Retrieve accounts from the local node
