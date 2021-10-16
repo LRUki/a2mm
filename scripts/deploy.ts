@@ -4,7 +4,7 @@ import { ethers, upgrades } from "hardhat";
 async function deploy() {
   const Box = await ethers.getContractFactory("Box");
   console.log("Deploying Box...");
-  const box = await await upgrades.deployProxy(Box, [1000], {
+  const box = await upgrades.deployProxy(Box, [1000], {
     initializer: "store",
   });
   await box.deployed();
