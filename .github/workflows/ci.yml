@@ -3,29 +3,14 @@ name: CI
 on: [push]
 
 jobs:
-  test:
-    name: Test code
+  super-lint:
+    name: Lint code
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Run tests
-        run: |
-          npm install
-          npm run test
-
-  deploy:
-    name: Deploy code
-    runs-on: ubuntu-latest
-    container: ruby:latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Deploy repo to Heroku
-        run: |
-          gem install dpl
-          dpl --provider=heroku --app=${{ secrets.HEROKU_APP_NAME }} --api-key=${{ secrets.HEROKU_API_KEY }}
+      - name: Run super-linter
+        uses: github/super-linter@v4
+        env:
+          JAVASCRIPT_DEFAULT_STYLE: prettier
