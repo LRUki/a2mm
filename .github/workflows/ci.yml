@@ -1,16 +1,21 @@
 name: CI
 
-on: [push]
-
+on: 
+  push:
+    branches:    
+      - dev
+ 
 jobs:
-  super-lint:
-    name: Lint code
+  test:
+    name: Test code
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Run super-linter
-        uses: github/super-linter@v4
-        env:
-          JAVASCRIPT_DEFAULT_STYLE: prettier
+      - name: Run tests
+        run: npx hardhat test
+        with:
+          node-version: 12.x
+
+  

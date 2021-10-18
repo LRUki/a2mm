@@ -25,6 +25,12 @@ npm run deploy --network=localhost
 npm run deploy --network=ropsten
 ```
 
+To run the tests
+
+```
+npx hardhat test
+```
+
 To upgrade the contract at [address] to localhost and ropsten
 
 ```
