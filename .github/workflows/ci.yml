@@ -12,7 +12,5 @@ jobs:
 
       - name: Run tests
         run: npx hardhat test
-        with:
-          node-version: 12.x
 
   
