@@ -7,10 +7,15 @@ jobs:
     name: Lint code
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - uses: actions/checkout@v2
+      - name: npm install
         run: |
           npm install
+      - name: Install solhint
+        run: |
           npm install -g solhint
+      - name: Checkout code
+        run: |
           solhint 'contracts/Box.sol'
   test:
     name: Test code
