@@ -26,6 +26,7 @@ jobs:
 
       - name: Run tests
         run: |
+          echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
           npm install
           npx hardhat test
   deploy:
