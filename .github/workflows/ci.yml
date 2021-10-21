@@ -3,6 +3,15 @@ name: CI
 on: [push]
  
 jobs:
+  super-lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        run: |
+          npm install
+          npm install -g solhint
+          solhint 'contracts/Box.sol'
   test:
     name: Test code
     runs-on: ubuntu-latest
