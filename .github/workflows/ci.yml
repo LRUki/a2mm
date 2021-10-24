@@ -29,17 +29,18 @@ jobs:
           echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
           npm install
           npx hardhat test
-  deploy:
-    name: Deploy code
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v2
-      - name: npm install
-        run: |
-          npm install
-      - name: Deploy
-        run: |
-          echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
-          npm run deploy --network=ropsten
+  # deploy:
+  #   name: Deploy code
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: npm install
+  #       run: |
+  #         npm install
+  #     - name: Deploy
+  #       run: |
+  #         echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
+  #         npm run deploy --network=ropsten
   
