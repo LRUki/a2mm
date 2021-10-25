@@ -18,34 +18,41 @@ This
 npx hardhat compile
 ```
 
-To deploy the contract to localhost and ropsten
-
-```
-npm run deploy --network=localhost
-npm run deploy --network=ropsten
-```
-
 To run the tests
 
 ```
 npx hardhat test
 ```
 
-To upgrade the contract at [address] to localhost and ropsten
-
-```
-npm run upgrade --network=localhost --address=[address]
-npm run upgrade --network=ropsten --address=[address]
-```
-
-Make sure you are running the blockchain locally first when deploying the contract locally.
+You could run the blockchain with the same state as the mainnet locally by running
 
 ```
 npx hardhat node
 ```
 
-We can use the Hardhat console to interact with our deployed Box contract on our localhost network.
+To deploy/upgrade the contract locally run the following commands respectively.
+[address] is the address of the previously deployed contract
 
 ```
+npm run deploy --network=localhost
+npm run upgrade --network=localhost --address=[address]
+```
+
+similarly with ropsten testnet,
+
+```
+npm run deploy --network=ropsten
+npm run upgrade --network=ropsten --address=[address]
+```
+
+We can interact with the smart contract through the Hardhat console or running a ts file.
+look at ./scripts/index.ts for example
+
+```
+//make sure you change the address of the smart contract if it's redeployed.
 npx hardhat console --network localhost
+
+or
+
+npx hardhat run --network localhost ./scripts/index.ts
 ```
