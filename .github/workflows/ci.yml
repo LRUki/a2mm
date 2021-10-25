@@ -1,0 +1,46 @@
+name: CI
+
+on: [push]
+ 
+jobs:
+  super-lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: npm install
+        run: |
+          npm install
+      - name: Install solhint
+        run: |
+          npm install -g solhint
+      - name: Checkout code
+        run: |
+          solhint 'contracts/*'
+  test:
+    name: Test code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
+          npm install
+          npx hardhat test
+  # deploy:
+  #   name: Deploy code
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: npm install
+  #       run: |
+  #         npm install
+  #     - name: Deploy
+  #       run: |
+  #         echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
+  #         npm run deploy --network=ropsten  
+  

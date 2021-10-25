@@ -25,6 +25,19 @@ npm run deploy --network=localhost
 npm run deploy --network=ropsten
 ```
 
+To run the tests
+
+```
+npx hardhat test
+```
+
+To upgrade the contract at [address] to localhost and ropsten
+
+```
+npm run upgrade --network=localhost --address=[address]
+npm run upgrade --network=ropsten --address=[address]
+```
+
 Make sure you are running the blockchain locally first when deploying the contract locally.
 
 ```
