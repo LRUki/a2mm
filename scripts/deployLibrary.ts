@@ -2,19 +2,15 @@
 // refert to hardhat.config.ts
 import { ethers, upgrades } from "hardhat";
 
-const CONTRACT_NAME = "UniV3PriceFeed";
+const LIBRARY_NAME = "TokenAddrs";
 
 async function deploy() {
-  const Contract = await ethers.getContractFactory(CONTRACT_NAME, {
-    libraries: {
-      TokenAddrs: "0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5",
-    },
-  });
-  console.log(`Deploying ${CONTRACT_NAME}`);
+  const Contract = await ethers.getContractFactory(LIBRARY_NAME);
+  console.log(`Deploying ${LIBRARY_NAME}`);
   const contract = await Contract.deploy();
 
   await contract.deployed();
-  console.log(`${CONTRACT_NAME} deployed to`, contract.address);
+  console.log(`${LIBRARY_NAME} deployed to`, contract.address);
 }
 
 deploy()

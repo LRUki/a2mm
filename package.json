@@ -24,5 +24,8 @@
     "hardhat": "^2.6.5",
     "ts-node": "^10.3.0",
     "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@uniswap/v3-periphery": "^1.2.1"
   }
 }
