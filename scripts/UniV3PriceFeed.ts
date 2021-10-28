@@ -2,7 +2,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const address = "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43";
+  const address = "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD";
   const Contract = await ethers.getContractFactory("UniV3PriceFeed", {
     libraries: {
       TokenAddrs: "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43",

@@ -7,7 +7,7 @@ const CONTRACT_NAME = "UniV3PriceFeed";
 async function deploy() {
   const Contract = await ethers.getContractFactory(CONTRACT_NAME, {
     libraries: {
-      TokenAddrs: "0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5",
+      TokenAddrs: "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43",
     },
   });
   console.log(`Deploying ${CONTRACT_NAME}`);
