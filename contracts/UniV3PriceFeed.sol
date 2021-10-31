@@ -3,6 +3,7 @@ pragma solidity 0.8.3;
 
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "./libraries/TokenAddrs.sol";
+import "hardhat/console.sol";
 
 contract UniV3PriceFeed {
   IQuoter public quoter;
@@ -19,18 +20,19 @@ contract UniV3PriceFeed {
   // do not used on-chain, gas inefficient!
   function getPrice(uint256 amount) external payable returns (uint256) {
     address tokenIn = TokenAddrs.Token.WETH.getAddr();
-    address tokenOut = TokenAddrs.Token.AXS.getAddr();
-    // address tokenIn = 0x0a180A76e4466bF68A7F86fB029BEd3cCcFaAac5;
-    // address tokenOut = 0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b;
+    address tokenOut = TokenAddrs.Token.UNI.getAddr();
+    console.log("TOKENIN",tokenIn);
+    console.log("TOKENOUT",tokenOut);
     uint24 fee = 3000;
     uint160 sqrtPriceLimitX96 = 0;
-    return
-      quoter.quoteExactInputSingle(
+    uint256 x = quoter.quoteExactInputSingle(
         tokenIn,
         tokenOut,
         fee,
         amount,
         sqrtPriceLimitX96
       );
+    console.log(x);
+    return x;
   }
 }

@@ -22,10 +22,8 @@ async function main() {
 
   let value = await contract.getAddres(0);
   console.log("Address of WETH is", value.toString());
-  value = await contract.getPrice(1);
-  console.log("1AXS=", value.toString(), value.value.toString());
-  value = await contract.getPrice(100);
-  console.log("100AXS=", value.value.toString());
+  value = await contract.getPrice(Math.pow(10, 8));
+  console.log("1AXS=", value, value.toString());
 }
 
 main()
