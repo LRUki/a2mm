@@ -19,11 +19,11 @@ async function main() {
     libraries,
   });
   const contract = await Contract.attach(contractAddress);
-
-  let value = await contract.getAddres(0);
-  console.log("Address of WETH is", value.toString());
-  value = await contract.getPrice(Math.pow(10, 8));
-  console.log("1AXS=", value, value.toString());
+  console.log("======================================================");
+  console.log("ETH:USDT");
+  await contract.getPrice(0, 3, `${Math.pow(10, 12)}`);
+  console.log("ETH:UNI");
+  await contract.getPrice(0, 1, `${Math.pow(10, 18)}`);
 }
 
 main()
