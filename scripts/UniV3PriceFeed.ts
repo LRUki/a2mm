@@ -22,9 +22,17 @@ async function main() {
   const contract = await Contract.attach(contractAddress);
   console.log("======================================================");
   console.log("ETH:USDT");
-  await contract.getPrice(Token.WETH, Token.USDT, `${Math.pow(10, 12)}`);
-  console.log("ETH:UNI");
-  await contract.getPrice(Token.WETH, Token.UNI, `${Math.pow(10, 18)}`);
+  let tx = await contract.getPrice(
+    Token.WETH,
+    Token.USDT,
+    `${Math.pow(10, 12)}`
+  );
+  let response = await tx.wait();
+  console.log(
+    "Event emitted",
+    response.events[0].event,
+    response.events[0].args
+  );
 }
 
 main()
