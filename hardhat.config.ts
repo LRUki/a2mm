@@ -7,7 +7,13 @@ import { mnemonic, url } from "./secret.json";
 
 export default {
   solidity: {
-    compilers: [{ version: "0.8.3" }],
+    compilers: [
+      {
+        version: "0.8.3" 
+      },
+      {
+        version: "0.6.6"
+      }],
   },
   defaultNetwork: "hardhat",
   networks: {
