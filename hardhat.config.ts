@@ -6,7 +6,9 @@ import "@openzeppelin/hardhat-upgrades";
 import { mnemonic, url } from "./secret.json";
 
 export default {
-  solidity: "0.7.6",
+  solidity: {
+    compilers: [{ version: "0.8.3" }],
+  },
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
