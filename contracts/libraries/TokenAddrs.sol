@@ -14,7 +14,7 @@ library TokenAddrs {
 
   function getAddr(Token token) external pure returns (address) {
     if (token == Token.WETH) {
-      return address(0x0a180A76e4466bF68A7F86fB029BEd3cCcFaAac5);
+      return address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     } else if (token == Token.UNI) {
       return address(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
     } else if (token == Token.DAI) {
