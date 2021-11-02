@@ -8,15 +8,8 @@ import "hardhat/console.sol";
 contract UniV3PriceFeed {
   IQuoter public quoter = IQuoter(address(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6));
   using TokenAddrs for TokenAddrs.Token;
-
-  function getAddres(TokenAddrs.Token token) external pure returns (address) {
-    return token.getAddr();
-  }
-
   // do not used on-chain, gas inefficient!
   function getPrice(TokenAddrs.Token tokenIn, TokenAddrs.Token tokenOut, uint256 amount) external payable returns (uint256) {
-    console.log("TOKENIN:",tokenIn.getAddr());
-    console.log("TOKENOUT:",tokenOut.getAddr());
     uint24 fee = 3000;
     uint256 x = quoter.quoteExactInputSingle(
         tokenIn.getAddr(),
