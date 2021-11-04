@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity  0.6.6 || 0.8.3;
+// solhint-disable-next-line
+pragma solidity 0.6.6 || 0.8.3;
 
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "./interfaces/IReserveFeed.sol";
@@ -22,7 +23,7 @@ contract ReserveFeed is IReserveFeed {
 
 	function _getReserves(IUniswapV2Factory factory, address tokenIn, address tokenOut) private view returns (uint,uint) {
 		IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(tokenIn, tokenOut));
-  		(uint res0, uint res1,) = pair.getReserves();
-       		return (res0, res1);
+  		(uint resIn, uint resOut,) = pair.getReserves();
+       		return (resIn, resOut);
 	}
 }
