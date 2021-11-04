@@ -5,7 +5,7 @@
   "scripts": {
     "test": "npx hardhat test",
     "deploy": "npx hardhat run --network $npm_config_network scripts/deploy.ts",
-    "upgrade": "ADDRESS=$npm_config_address npx hardhat run --network $npm_config_network scripts/upgrade.ts "
+    "solhint": "solhint contracts/**/*.sol"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +26,7 @@
     "typescript": "^4.4.4"
   },
   "dependencies": {
+    "@uniswap/v2-periphery": "1.1.0-beta.0",
     "@uniswap/v3-periphery": "^1.2.1"
   }
 }
