@@ -5,7 +5,7 @@
   "scripts": {
     "test": "npx hardhat test",
     "deploy": "npx hardhat run --network $npm_config_network scripts/deploy.ts",
-    "upgrade": "ADDRESS=$npm_config_address npx hardhat run --network $npm_config_network scripts/upgrade.ts "
+    "solhint": "solhint contracts/**/*.sol"
   },
   "keywords": [],
   "author": "",
