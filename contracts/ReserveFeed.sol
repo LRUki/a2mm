@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity  0.8.3 || 0.6.6; //solhint-disable-line
+// solhint-disable-next-line
+pragma solidity 0.8.3 || 0.6.6;
 
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "./interfaces/IReserveFeed.sol";
