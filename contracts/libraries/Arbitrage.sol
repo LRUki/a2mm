@@ -54,19 +54,19 @@ library Arbitrage {
     // @param amms - the AMMs we are considering doing arbitrage between
     // @return
     function _arbitrageForY(Structs.Amm[] memory amms) private pure {
-        sortedAmms = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
-
-        l = 0;
-        r = amms.length - 1;
-        Structs.Amm[] memory lowAmms = new Structs.Amm[](amms.length - 1);
-        Structs.Amm[] memory highAmms = new Structs.Amm[](amms.length - 1);
-        while (true) {
-            ml = SharedFunctions.aggregateAmmPools(lowAmms[:l+1]);
-            mr = SharedFunctions.aggregateAmmPools(highAmms[r:]);
-            if (_isArbitrageProfitable(ml, mr)) {
-
-            }
-        }
+//        sortedAmms = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
+//
+//        l = 0;
+//        r = amms.length - 1;
+//        Structs.Amm[] memory lowAmms = new Structs.Amm[](amms.length - 1);
+//        Structs.Amm[] memory highAmms = new Structs.Amm[](amms.length - 1);
+//        while (true) {
+//            ml = SharedFunctions.aggregateAmmPools(lowAmms[:l+1]);
+//            mr = SharedFunctions.aggregateAmmPools(highAmms[r:]);
+//            if (_isArbitrageProfitable(ml, mr)) {
+//
+//            }
+//        }
         //TODO
     }
 }

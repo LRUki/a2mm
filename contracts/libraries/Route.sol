@@ -29,46 +29,48 @@ library Route {
         bool hasXRunOut = false;
 
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
-        for (int256 i = amms.length - 2; i >= 0; --i) {
-            uint256 nextBestAmmIndex = sortedIndices[i];
-            Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
-            deltaX = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, nextBestAmm);
-            // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
-            if (deltaX == 0) {
-                aggregatedPool.x += nextBestAmm.x;
-                aggregatedPool.y += nextBestAmm.y;
-                leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
-                continue;
-            }
-
-            // If we ran out of X to spend, then there might be an arbitrage opportunity - We can check by assuming that we had more X
-            // and checking if we would have needed to swap more at the worse AMMs before swapping there.
-            if (deltaX >= amountOfX) {
-                deltaX = amountOfX;
-                amountOfX = 0;
-                shouldArbitrage = true;
-                uint256 deltaXWorst;
-                deltaXWorst = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, worstAmm);
-                if (deltaXWorst == 0) {
-                    shouldArbitrage = false;
+        if (amms.length >= 2) {
+            for (uint256 i = amms.length - 2; i >= 0; --i) {
+                uint256 nextBestAmmIndex = sortedIndices[i];
+                Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
+                deltaX = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, nextBestAmm);
+                // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
+                if (deltaX == 0) {
+                    aggregatedPool.x += nextBestAmm.x;
+                    aggregatedPool.y += nextBestAmm.y;
+                    leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
+                    continue;
                 }
-                hasXRunOut = true;
-            }
-            totalY += SharedFunctions.quantityOfYForX(aggregatedPool, deltaX);
 
-            //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
-            uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
-            for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
-                xSellYGain[sortedIndices[j]].x += splits[j];
-                xSellYGain[sortedIndices[j]].y += SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
-            }
+                // If we ran out of X to spend, then there might be an arbitrage opportunity - We can check by assuming that we had more X
+                // and checking if we would have needed to swap more at the worse AMMs before swapping there.
+                if (deltaX >= amountOfX) {
+                    deltaX = amountOfX;
+                    amountOfX = 0;
+                    shouldArbitrage = true;
+                    uint256 deltaXWorst;
+                    deltaXWorst = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, worstAmm);
+                    if (deltaXWorst == 0) {
+                        shouldArbitrage = false;
+                    }
+                    hasXRunOut = true;
+                }
+                totalY += SharedFunctions.quantityOfYForX(aggregatedPool, deltaX);
 
-            if (hasXRunOut) {
-                break;
-            }
+                //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
+                uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
+                for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
+                    xSellYGain[sortedIndices[j]].x += splits[j];
+                    xSellYGain[sortedIndices[j]].y += SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
+                }
 
-            amountOfX -= deltaX;
-            leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
+                if (hasXRunOut) {
+                    break;
+                }
+
+                amountOfX -= deltaX;
+                leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
+            }
         }
     }
 
@@ -82,11 +84,11 @@ library Route {
         splits = new uint256[](numberOfAmms);
 
         uint256 sumX = 0;
-        for (int256 i = 0; i < numberOfAmms; ++i) {
+        for (uint256 i = 0; i < numberOfAmms; ++i) {
             sumX += amms[i].x;
         }
         // We just take the weighted average to know how to split our spending:
-        for (int256 i = 0; i < numberOfAmms; ++i) {
+        for (uint256 i = 0; i < numberOfAmms; ++i) {
             splits[i] = (amms[i].x * deltaX) / sumX;
         }
     }

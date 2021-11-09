@@ -11,7 +11,7 @@ library SharedFunctions {
     // @returns aggregatePool - the aggregated pool
     function aggregateAmmPools(Structs.Amm[] memory amms) public pure returns (Structs.Amm memory aggregatePool) {
         aggregatePool = Structs.Amm(0, 0);
-        for (int256 i = 0; i < amms.length; ++i) {
+        for (uint256 i = 0; i < amms.length; ++i) {
             aggregatePool.x += amms[i].x;
             aggregatePool.y += amms[i].y;
         }
@@ -48,8 +48,8 @@ library SharedFunctions {
         // fixed commissionFee = 0.003;
         // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
         // as:
-        q = amm.y / (1000*amm.x + 997*x);
-        r = amm.y - q*(1000*amm.x + 997*x); //r = y % (1000*amm.x + 997*x)
+        uint256 q = amm.y / (1000*amm.x + 997*x);
+        uint256 r = amm.y - q*(1000*amm.x + 997*x); //r = y % (1000*amm.x + 997*x)
         return 1000*x*q + 1000*x*r/(1000*amm.x + 997*x);
     }
 
@@ -66,12 +66,12 @@ library SharedFunctions {
     // @return indices - the indices of the amms array sorted by their exchange rate in ascending Y/X order
     function sortAmmArrayIndicesByExchangeRate(Structs.Amm[] memory amms) public pure returns (uint256[] memory indices) {
         indices = new uint256[](amms.length);
-        for (int256 i = 0; i < amms.length; i++) {
+        for (uint256 i = 0; i < amms.length; i++) {
             indices[i] = i;
         }
 
         uint256 n = amms.length;
-        for (int256 i = 1; i < n; ++i) {
+        for (uint256 i = 1; i < n; ++i) {
             uint256 tmp = indices[i];
             uint256 j = i;
             while (j > 0 && exchangeRateForY(amms[tmp]) < exchangeRateForY(amms[indices[j - 1]])) {
