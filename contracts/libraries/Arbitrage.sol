@@ -58,8 +58,8 @@ library Arbitrage {
 
         l = 0;
         r = amms.length - 1;
-        Structs.Amm[] memory lowAmms = Structs.Amm[](amms.length - 1);
-        Structs.Amm[] memory highAmms = Structs.Amm[](amms.length - 1);
+        Structs.Amm[] memory lowAmms = new Structs.Amm[](amms.length - 1);
+        Structs.Amm[] memory highAmms = new Structs.Amm[](amms.length - 1);
         while (true) {
             ml = SharedFunctions.aggregateAmmPools(lowAmms[:l+1]);
             mr = SharedFunctions.aggregateAmmPools(highAmms[r:]);
