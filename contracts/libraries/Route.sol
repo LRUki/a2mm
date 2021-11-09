@@ -28,6 +28,7 @@ library Route {
         uint256 elemsAddedToLeveledAmmIndices = 1;
         bool hasXRunOut = false;
 
+        shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
         if (amms.length >= 2) {
             for (uint256 i = amms.length - 2; i >= 0; --i) {
