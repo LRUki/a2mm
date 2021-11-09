@@ -14,22 +14,22 @@ library Route {
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
     function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
 
-        // Sort the AMMs - best to worst in exchange rate.
+        // Sort the AMMs - worst to best in exchange rate.
         uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
         Structs.Amm memory aggregatedPool = Structs.Amm(amms[0].x, amms[0].y);
-        Structs.Amm memory worstAmm = amms[sortedIndices[sortedIndices.length - 1]];
+        Structs.Amm memory worstAmm = amms[sortedIndices[0]];
         uint256 deltaX;
 
         totalY = 0;
 
         xSellYGain = new Structs.XSellYGain[](amms.length);
         Structs.Amm[] memory leveledAmms = new Structs.Amm[](amms.length);
-        leveledAmms[0] = amms[sortedIndices[0]];
+        leveledAmms[0] = amms[sortedIndices[sortedIndices.length - 1]];
         uint256 elemsAddedToLeveledAmmIndices = 1;
         bool hasXRunOut = false;
 
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
-        for (uint256 i = 1; i < amms.length; ++i) {
+        for (uint256 i = amms.length - 2; i >= 0; --i) {
             uint256 nextBestAmmIndex = sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
             deltaX = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, nextBestAmm);
@@ -109,25 +109,6 @@ library Route {
             amm2Part += leftover;
         }
         return (amm1Part, amm2Part);
-    }
-
-
-    // @param amms - the AMMs whose pools we want to aggregate (i.e. add together element-wise)
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm[] memory amms) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(0, 0);
-        for (uint256 i = 0; i < amms.length; ++i) {
-            aggregatePool.x += amms[i].x;
-            aggregatePool.y += amms[i].y;
-        }
-    }
-
-
-    // @param amm1 - the first AMM whose pool we want to aggregate (i.e. add together element-wise)
-    // @param amm2 - the second AMM whose pool we want to aggregate
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(amm1.x + amm2.x, amm1.y + amm2.y);
     }
 
 
