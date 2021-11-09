@@ -54,16 +54,53 @@ library Arbitrage {
     // @param amms - the AMMs we are considering doing arbitrage between
     // @return
     function _arbitrageForY(Structs.Amm[] memory amms) private pure {
-        sortedAmms = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
+        uint256[] memory indices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
 
-        l = 0;
-        r = amms.length - 1;
-        Structs.Amm[] memory lowAmms = Structs.Amm[](amms.length - 1);
-        Structs.Amm[] memory highAmms = Structs.Amm[](amms.length - 1);
+        uint256 N = amms.length - 1;
+        uint256 l = 0;
+        uint256 r = N;
+        Structs.Amm[] memory sortedAmms = new Structs.Amm[](N);
+
+        for (uint256 i = 0; i < N; ++i) {
+            sortedAmms[i] = amms[indices[i]];
+        }
         while (true) {
-            ml = SharedFunctions.aggregateAmmPools(lowAmms[:l+1]);
-            mr = SharedFunctions.aggregateAmmPools(highAmms[r:]);
+            Structs.Amm memory ml = SharedFunctions.aggregateAmmPools(sortedAmms[0:l+1]);
+            Structs.Amm memory mr = SharedFunctions.aggregateAmmPools(sortedAmms[r:]);
             if (_isArbitrageProfitable(ml, mr)) {
+                uint256 dyOpt = _optimalAmountToSpendOnArbitrage(ml, mr);
+                uint256 dx = SharedFunctions.quantityOfXForY(ml, dyOpt);
+                
+                Structs.Amm memory mlSim = Structs.Amm(ml.x + dx, ml.y - dyOpt);
+                Structs.Amm memory mrSim = Structs.Amm(mr.x - dx, mr.y - dyOpt);
+
+                uint256 pml = SharedFunctions.exchangeRateForY(mlSim);
+                uint256 pmr = SharedFunctions.exchangeRateForY(mrSim);
+
+                bool shiftl = ((l+1) < r && pml > SharedFunctions.exchangeRateForY(sortedAmms[l+1]));
+                bool shiftr = (l < (r-1) && pmr > SharedFunctions.exchangeRateForY(sortedAmms[r-1]));
+
+                uint256 dxl;
+                uint256 dxr;
+
+                if (shiftl) {
+                    //TODO
+                    dxl = _optimalAmountToSpendOnArbitrage(ml, sortedAmms[l+1]);
+                }
+
+                if (shiftr) {
+                    dxr = _optimalAmountToSpendOnArbitrage(ml, sortedAmms[r-1]);
+                    //TODO      
+                }
+
+                if (shiftr && dxl <= dxl) {
+                    //TODO
+                }
+
+                if (shiftl && dxl >= dxl) {
+                    //TODO
+                }
+
 
             }
         }
