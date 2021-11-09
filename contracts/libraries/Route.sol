@@ -4,6 +4,7 @@ pragma solidity ^0.8.3;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
+import "hardhat/console.sol";
 
 library Route {
 
@@ -15,7 +16,7 @@ library Route {
     //     Structs.Amm memory myAmm = Structs.Amm(elem1, elem2);
     //     return myAmm;
     // }
-    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.Amm[] memory){
+    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i){
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);

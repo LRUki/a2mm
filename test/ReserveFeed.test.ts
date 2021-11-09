@@ -19,7 +19,7 @@ describe("ReserveFeed", function () {
     expect(reserveOut.toString()).to.equal("119932108135609");
   });
 
-  it("ReserveFeed fetches coorrect reserves from Uni", async function () {
+  it("ReserveFeed fetches correct reserves from Uni", async function () {
     const [reserveIn, reserveOut] = await this.reserveFeed.getUniV2Reserves(
       tokenToAddress[Token.WETH],
       tokenToAddress[Token.USDT]
