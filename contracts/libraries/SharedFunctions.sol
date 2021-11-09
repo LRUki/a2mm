@@ -30,7 +30,7 @@ library SharedFunctions {
     // @param x - the number whose square root we want to find
     // @return y - the square roorted number (as integer)
     function sqrt(uint256 x) public pure returns (uint256 y) {
-        uint z = (x + 1) / 2;
+        uint256 z = (x + 1) / 2;
         y = x;
         while (z < y) {
             y = z;
@@ -40,17 +40,26 @@ library SharedFunctions {
 
 
     // @notice - has potential issues of underflow or overflow.
-    // @param amm - the AMM we are looking to trade at
-    // @param x - how much of X we are willing to potentially spend
+    // @param x - the amount of X in the AMM we are looking to trade at
+    // @param y - the amount of Y in the AMM we are looking to trade at
+    // @param dx - how much of X we are willing to potentially spend
     // @return - how much of Y we would get if we traded x of X for Y
-    function quantityOfYForX(Structs.Amm memory amm, uint256 x) public pure returns (uint256){
+    function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256){
         // float and int multiplication is not supported, so we have to rewrite:
         // fixed commissionFee = 0.003;
         // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
         // as:
-        q = y / (1000*amm.x + 997*x);
-        r = y - q*(1000*amm.x + 997*x); //r = y % (1000*amm.x + 997*x)
-        return 1000*x*q + 1000*x*r/(1000*amm.x + 997*x);
+        uint256 q = y / (1000*x + 997*dx);
+        uint256 r = y - q*(1000*x + 997*dx); //r = y % (1000*amm.x + 997*x)
+        return 1000*dx*q + 1000*dx*r/(1000*x + 997*dx);
+    }
+
+    function quantityOfYForX(Structs.Amm memory amm, uint256 dx) public pure returns (uint256){
+        return quantityOfYForX(amm.x, amm.y, dx);
+    }
+
+    function quantityOfXForY(Structs.Amm memory amm, uint256 dy) public pure returns (uint256){
+        return quantityOfYForX(amm.y, amm.x, dy);
     }
 
 
