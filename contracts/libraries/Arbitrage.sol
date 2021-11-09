@@ -55,7 +55,6 @@ library Arbitrage {
     // @return
     function _arbitrageForY(Structs.Amm[] memory amms) private pure {
         uint256[] memory indices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
-
         uint256 N = amms.length - 1;
         uint256 l = 0;
         uint256 r = N;

@@ -29,7 +29,7 @@ library Route {
         bool hasXRunOut = false;
 
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
-        for (uint256 i = amms.length - 2; i >= 0; --i) {
+        for (int256 i = amms.length - 2; i >= 0; --i) {
             uint256 nextBestAmmIndex = sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
             deltaX = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, nextBestAmm);
@@ -82,11 +82,11 @@ library Route {
         splits = new uint256[](numberOfAmms);
 
         uint256 sumX = 0;
-        for (uint256 i = 0; i < numberOfAmms; ++i) {
+        for (int256 i = 0; i < numberOfAmms; ++i) {
             sumX += amms[i].x;
         }
         // We just take the weighted average to know how to split our spending:
-        for (uint256 i = 0; i < numberOfAmms; ++i) {
+        for (int256 i = 0; i < numberOfAmms; ++i) {
             splits[i] = (amms[i].x * deltaX) / sumX;
         }
     }
