@@ -7,12 +7,27 @@ import "./SharedFunctions.sol";
 
 library Route {
 
+    // function id(Structs.Amm memory amm) public pure returns (uint256){
+    //     return (amm.x);
+    // }
+
+    // function giveMeAmm(uint256 elem1, uint256 elem2) public pure returns (Structs.Amm memory){
+    //     Structs.Amm memory myAmm = Structs.Amm(elem1, elem2);
+    //     return myAmm;
+    // }
+    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.Amm[] memory){
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i){
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return _route(amms, amountOfX);
+    }
     // @param amms - All AMM liquidity pools (x, y)
     // @param amountOfX - how much of X we are willing to trade for Y
     // @return xSellYGain - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
-    function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+    function _route(Structs.Amm[] memory amms, uint256 amountOfX) private pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
 
         // Sort the AMMs - best to worst in exchange rate.
         uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
