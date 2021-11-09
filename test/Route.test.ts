@@ -14,12 +14,12 @@ describe("Route", function () {
   });
 
   it("Route runs", async function () {
-    const amm = await this.route.route([[2000000000000, 50000000000000], [2000000000000, 50000000000000]], 3000000000000);
+    const amm = await this.route.route([[2000, 50000], [2000, 50000], [2000, 50000]], 3000);
     console.log(amm.toString(), "ROUTE");
   });
 
-  it("Route runs", async function () {
-    const amm = await this.route._test_howMuchXToSpendOnDifferentPricedAmms();
-    console.log(amm.toString(), "ROUTE");
-  });
+  // it("Route runs", async function () {
+  //   const amm = await this.route._test_howMuchXToSpendOnDifferentPricedAmms();
+  //   console.log(amm.toString(), "ROUTE");
+  // });
 });
