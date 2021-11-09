@@ -7,12 +7,20 @@ import "./SharedFunctions.sol";
 
 library Route {
 
+    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i){
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return _route(amms, amountOfX);
+    }
     // @param amms - All AMM liquidity pools (x, y)
     // @param amountOfX - how much of X we are willing to trade for Y
     // @return xSellYGain - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
-    function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+    function _route(Structs.Amm[] memory amms, uint256 amountOfX) private pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+//        assert(amms.length >= 2);
 
         // Sort the AMMs - worst to best in exchange rate.
         uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
@@ -112,6 +120,16 @@ library Route {
             amm2Part += leftover;
         }
         return (amm1Part, amm2Part);
+    }
+
+
+    function _test_howMuchXToSpendOnDifferentPricedAmms() public pure returns (uint256 deltaX){
+        uint256 x1 = 2000000000000;
+        uint256 x2 = 2000000000000;
+        uint256 y1 = 50000000000000;
+        uint256 y2 = 50000000000000;
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt(2257 * x1 * y2 / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
     }
 
 
