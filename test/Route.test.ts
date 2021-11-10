@@ -14,12 +14,6 @@ describe("==================================== Route ===========================
     await this.route.deployed();
   });
 
-<<<<<<< HEAD
-  it("Route runs", async function () {
-    // const amm = await this.route.route([[2000, 50000], [2000, 50000], [2000, 50000]], 3000);
-    const tenToTheNine = Math.pow(10, 9);
-    const amm = await this.route.route(
-=======
   it("calculates x to spend on better amm to approach the worse amm", async function () {
     const res = await this.route.howMuchXToSpendToLevelAmms(
       toStringMap([100 * TEN_TO_18, 212.323 * TEN_TO_18]),
@@ -37,7 +31,6 @@ describe("==================================== Route ===========================
 
   it("leveledAmms get split correctly", async function () {
     const res = await this.route.howToSplitRoutingOnLeveledAmms(
->>>>>>> 1084e0f2a039ce5a111557a77a80ddfc6817cbb1
       [
         toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
         toStringMap([200 * TEN_TO_18, 400 * TEN_TO_18]),
