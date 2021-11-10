@@ -8,6 +8,16 @@ import "hardhat/console.sol";
 
 library Route {
 
+    struct RouteHelper {
+        uint256[] sortedIndices;
+        Structs.Amm aggregatedPool;
+        Structs.Amm worstAmm;
+        uint256 deltaX;
+        Structs.Amm[] leveledAmms;
+        uint256 elemsAddedToLeveledAmmIndices;
+        bool hasXRunOut;
+    }
+
     function route(uint256[2][] memory ammsArray, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i) {
@@ -34,64 +44,73 @@ library Route {
             return (xSellYGain, totalY, false);
         }
 
+        RouteHelper memory routeHelper = RouteHelper(
         // Sort the AMMs - best to worst in exchange rate.
-        uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
-        Structs.Amm memory aggregatedPool = Structs.Amm(amms[0].x, amms[0].y);
-        Structs.Amm memory worstAmm = amms[sortedIndices[sortedIndices.length - 1]];
-        uint256 deltaX;
+            SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
+        , Structs.Amm(amms[0].x, amms[0].y)
+        , Structs.Amm(0,0)
+        , 0
+        , new Structs.Amm[](amms.length)
+        , 1
+        , false);
+        routeHelper.worstAmm = amms[routeHelper.sortedIndices[routeHelper.sortedIndices.length - 1]];
 
         totalY = 0;
 
-        Structs.Amm[] memory leveledAmms = new Structs.Amm[](amms.length);
-        leveledAmms[0] = amms[sortedIndices[0]];
-        uint256 elemsAddedToLeveledAmmIndices = 1;
-        bool hasXRunOut = false;
+        routeHelper.leveledAmms[0] = amms[routeHelper.sortedIndices[0]];
 
         shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
         for (uint256 i = amms.length - 2; i >= 0; --i) {
-            uint256 nextBestAmmIndex = sortedIndices[i];
+            uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
-            deltaX = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, nextBestAmm);
+            routeHelper.deltaX = _howMuchXToSpendOnDifferentPricedAmms(routeHelper.aggregatedPool, nextBestAmm);
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
-            if (deltaX == 0) {
-                aggregatedPool.x += nextBestAmm.x;
-                aggregatedPool.y += nextBestAmm.y;
-                leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
+            if (routeHelper.deltaX == 0) {
+                routeHelper.aggregatedPool.x += nextBestAmm.x;
+                routeHelper.aggregatedPool.y += nextBestAmm.y;
+                routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
                 continue;
             }
 
             // If we ran out of X to spend, then there might be an arbitrage opportunity - We can check by assuming that we had more X
             // and checking if we would have needed to swap more at the worse AMMs before swapping there.
-            if (deltaX >= amountOfX) {
-                deltaX = amountOfX;
+            if (routeHelper.deltaX >= amountOfX) {
+                routeHelper.deltaX = amountOfX;
                 amountOfX = 0;
                 shouldArbitrage = true;
                 uint256 deltaXWorst;
-                deltaXWorst = _howMuchXToSpendOnDifferentPricedAmms(aggregatedPool, worstAmm);
+                deltaXWorst = _howMuchXToSpendOnDifferentPricedAmms(routeHelper.aggregatedPool, routeHelper.worstAmm);
                 if (deltaXWorst == 0) {
                     shouldArbitrage = false;
                 }
-                hasXRunOut = true;
+                routeHelper.hasXRunOut = true;
             }
-            totalY += SharedFunctions.quantityOfYForX(aggregatedPool, deltaX);
+            totalY += SharedFunctions.quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
 
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
-            uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
-            for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
-                uint256 yGain = SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
-                xSellYGain[sortedIndices[j]].x += splits[j];
-                xSellYGain[sortedIndices[j]].y += yGain;
-                amms[sortedIndices[j]].x += splits[j];
-                amms[sortedIndices[j]].y -= yGain;
-            }
+            _updateAmmsAndSplits(routeHelper.elemsAddedToLeveledAmmIndices, xSellYGain, amms, routeHelper.leveledAmms, routeHelper.sortedIndices, routeHelper.deltaX);
 
-            if (hasXRunOut) {
+            if (routeHelper.hasXRunOut) {
                 break;
             }
 
-            amountOfX -= deltaX;
-            leveledAmms[elemsAddedToLeveledAmmIndices++] = amms[sortedIndices[i]];
+            amountOfX -= routeHelper.deltaX;
+            routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
+        }
+    }
+
+
+    function _updateAmmsAndSplits(uint256 elemsAddedToLeveledAmmIndices, Structs.XSellYGain[] memory xSellYGain,
+        Structs.Amm[] memory amms, Structs.Amm[] memory leveledAmms, uint256[] memory sortedIndices, uint256 deltaX)
+    pure private {
+        uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
+        for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
+            uint256 yGain = SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
+            xSellYGain[sortedIndices[j]].x += splits[j];
+            xSellYGain[sortedIndices[j]].y += yGain;
+            amms[sortedIndices[j]].x += splits[j];
+            amms[sortedIndices[j]].y -= yGain;
         }
     }
 
