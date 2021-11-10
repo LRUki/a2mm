@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
-describe("Route", function () {
+describe("==================================== Route ====================================", function () {
   before(async function () {
     const sharedFunctionAddress = await deployContract("SharedFunctions");
     this.Route = await ethers.getContractFactory("Route", {
@@ -18,10 +18,10 @@ describe("Route", function () {
     const amm = await this.route.route(
       [
         [2000 * tenToTheNine, 4000 * tenToTheNine],
-        [1600 * tenToTheNine, 2000 * tenToTheNine],
+        // [1600 * tenToTheNine, 2000 * tenToTheNine],
         // [1000 * tenToTheNine, 2000 * tenToTheNine],
       ],
-      3000
+      3 * tenToTheNine
     );
     console.log(amm.toString(), "ROUTE");
   });

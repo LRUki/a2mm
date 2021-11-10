@@ -15,13 +15,19 @@ library Route {
         }
         return _route(amms, amountOfX);
     }
+
+    struct RouteReturnValues {
+        uint256 totalY;
+        Structs.XSellYGain xSellYGain;
+        bool shouldArbitrage;
+    }
     // @param amms - All AMM liquidity pools (x, y)
     // @param amountOfX - how much of X we are willing to trade for Y
     // @return xSellYGain - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
     function _route(Structs.Amm[] memory amms, uint256 amountOfX) private pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
-
+        // RouteReturnValues memory routeLocalVars;
         // Sort the AMMs - best to worst in exchange rate.
         uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
         Structs.Amm memory aggregatedPool = Structs.Amm(amms[0].x, amms[0].y);
@@ -67,11 +73,12 @@ library Route {
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
             uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
             for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
-                // uint256 yAmount = 1;
+                //TODO: resolve stack too deep error when adding new local var
+                // uint256 yAmount = SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
                 xSellYGain[sortedIndices[j]].x += splits[j];
                 xSellYGain[sortedIndices[j]].y += SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
                 // amms[sortedIndices[j]].x += splits[j];
-                // amms[sortedIndices[j]].y -= yAmount;
+                // amms[sortedIndices[j]].y -= SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
             }
 
             if (hasXRunOut) {
