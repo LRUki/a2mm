@@ -17,9 +17,4 @@ describe("Route", function () {
     const amm = await this.route.route([[2000, 50000], [2000, 50000], [2000, 50000]], 3000);
     console.log(amm.toString(), "ROUTE");
   });
-
-  // it("Route runs", async function () {
-  //   const amm = await this.route._test_howMuchXToSpendOnDifferentPricedAmms();
-  //   console.log(amm.toString(), "ROUTE");
-  // });
 });
