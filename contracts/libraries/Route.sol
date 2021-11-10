@@ -7,16 +7,8 @@ import "./SharedFunctions.sol";
 import "hardhat/console.sol";
 
 library Route {
-
-    // function id(Structs.Amm memory amm) public pure returns (uint256){
-    //     return (amm.x);
-    // }
-
-    // function giveMeAmm(uint256 elem1, uint256 elem2) public pure returns (Structs.Amm memory){
-    //     Structs.Amm memory myAmm = Structs.Amm(elem1, elem2);
-    //     return myAmm;
-    // }
-    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+    //a wrapper function of _route as there is an issue passing in Structs from javascript
+    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool ) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i){
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -75,8 +67,11 @@ library Route {
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
             uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
             for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
+                // uint256 yAmount = 1;
                 xSellYGain[sortedIndices[j]].x += splits[j];
                 xSellYGain[sortedIndices[j]].y += SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
+                // amms[sortedIndices[j]].x += splits[j];
+                // amms[sortedIndices[j]].y -= yAmount;
             }
 
             if (hasXRunOut) {
@@ -128,40 +123,17 @@ library Route {
     }
 
 
-    // @param amms - the AMMs whose pools we want to aggregate (i.e. add together element-wise)
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm[] memory amms) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(0, 0);
-        for (uint256 i = 0; i < amms.length; ++i) {
-            aggregatePool.x += amms[i].x;
-            aggregatePool.y += amms[i].y;
-        }
-    }
-
-
-    // @param amm1 - the first AMM whose pool we want to aggregate (i.e. add together element-wise)
-    // @param amm2 - the second AMM whose pool we want to aggregate
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(amm1.x + amm2.x, amm1.y + amm2.y);
-    }
-
-
     //(Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y.
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
     function _howMuchXToSpendOnDifferentPricedAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) private pure returns (uint256 deltaX) {
-        uint256 x1;
-        uint256 x2;
-        uint256 y1;
-        uint256 y2;
+        uint256 x1 = betterAmm.x;
+        uint256 x2 = worseAmm.x;
+        uint256 y1 = betterAmm.y;
+        uint256 y2 = worseAmm.y;
 
-        x1 = betterAmm.x;
-        x2 = worseAmm.x;
-        y1 = betterAmm.y;
-        y2 = worseAmm.y;
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
         deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt(2257 * x1 * y2 / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
     }

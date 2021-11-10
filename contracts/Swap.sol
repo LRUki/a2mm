@@ -20,6 +20,7 @@
 //         Structs.XSellYGain[] memory routingsAndGains;
 //         (routingsAndGains, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
 //         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
+//TODO: remove if done by refrence
 //         for (uint256 i = 0; i < amms.length; i++) {
 //             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routingsAndGains[i].x, 0);
 //             amms[i].x -= routingsAndGains[i].x;
