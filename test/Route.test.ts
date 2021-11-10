@@ -14,7 +14,16 @@ describe("Route", function () {
   });
 
   it("Route runs", async function () {
-    const amm = await this.route.route([[2000, 50000], [2000, 50000], [2000, 50000]], 3000);
+    // const amm = await this.route.route([[2000, 50000], [2000, 50000], [2000, 50000]], 3000);
+    const tenToTheNine = Math.pow(10, 9);
+    const amm = await this.route.route(
+      [
+        [2000 * tenToTheNine, 4000 * tenToTheNine],
+        [1600 * tenToTheNine, 2000 * tenToTheNine],
+        // [1000 * tenToTheNine, 2000 * tenToTheNine],
+      ],
+      3000
+    );
     console.log(amm.toString(), "ROUTE");
   });
 });
