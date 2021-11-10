@@ -18,7 +18,10 @@ library Route {
         bool hasXRunOut;
     }
 
-    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+
+    //functions below are only for testing purposes
+    //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
+    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -48,7 +51,7 @@ library Route {
         // Sort the AMMs - best to worst in exchange rate.
             SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
         , Structs.Amm(amms[0].x, amms[0].y)
-        , Structs.Amm(0,0)
+        , Structs.Amm(0, 0)
         , 0
         , new Structs.Amm[](amms.length)
         , 1
@@ -64,7 +67,7 @@ library Route {
         for (uint256 i = amms.length - 2; i >= 0; --i) {
             uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
-            routeHelper.deltaX = _howMuchXToSpendOnDifferentPricedAmms(routeHelper.aggregatedPool, nextBestAmm);
+            routeHelper.deltaX = _howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, nextBestAmm);
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
             if (routeHelper.deltaX == 0) {
                 routeHelper.aggregatedPool.x += nextBestAmm.x;
@@ -80,7 +83,7 @@ library Route {
                 amountOfX = 0;
                 shouldArbitrage = true;
                 uint256 deltaXWorst;
-                deltaXWorst = _howMuchXToSpendOnDifferentPricedAmms(routeHelper.aggregatedPool, routeHelper.worstAmm);
+                deltaXWorst = _howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, routeHelper.worstAmm);
                 if (deltaXWorst == 0) {
                     shouldArbitrage = false;
                 }
@@ -154,41 +157,34 @@ library Route {
     }
 
 
-    // @param amms - the AMMs whose pools we want to aggregate (i.e. add together element-wise)
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm[] memory amms) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(0, 0);
-        for (uint256 i = 0; i < amms.length; ++i) {
-            aggregatePool.x += amms[i].x;
-            aggregatePool.y += amms[i].y;
-        }
-    }
-
-
-    // @param amm1 - the first AMM whose pool we want to aggregate (i.e. add together element-wise)
-    // @param amm2 - the second AMM whose pool we want to aggregate
-    // @returns aggregatePool - the aggregated pool
-    function _aggregateAmmPools(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (Structs.Amm memory aggregatePool) {
-        aggregatePool = Structs.Amm(amm1.x + amm2.x, amm1.y + amm2.y);
-    }
-
-
     //(Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y.
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function _howMuchXToSpendOnDifferentPricedAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) private pure returns (uint256 deltaX) {
-        uint256 x1;
-        uint256 x2;
-        uint256 y1;
-        uint256 y2;
+    function _howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) private pure returns (uint256 deltaX) {
+        uint256 x1 = betterAmm.x;
+        uint256 x2 = worseAmm.x;
+        uint256 y1 = betterAmm.y;
+        uint256 y2 = worseAmm.y;
 
-        x1 = betterAmm.x;
-        x2 = worseAmm.x;
-        y1 = betterAmm.y;
-        y2 = worseAmm.y;
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt(2257 * x1 * y2 / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+    }
+
+    function howToSplitRoutingOnLeveledAmms(uint256[2][] memory ammsArray, uint256 deltaX) public pure returns (uint256[] memory) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return _howToSplitRoutingOnLeveledAmms(amms, deltaX);
+    }
+
+    function howMuchXToSpendToLevelAmms(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
+
+        Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
+        Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
+
+        return _howMuchXToSpendToLevelAmms(betterAmm, worseAmm);
     }
 }
