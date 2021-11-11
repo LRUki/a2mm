@@ -21,7 +21,7 @@ library Route {
 
     //functions below are only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
-    function route(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
+    function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -36,7 +36,7 @@ library Route {
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
     function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
-        assert(amms.length >= 1);
+        // assert(amms.length >= 1);
 
         xSellYGain = new Structs.XSellYGain[](amms.length);
 

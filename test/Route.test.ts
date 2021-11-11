@@ -34,29 +34,29 @@ describe("==================================== Route ===========================
   it("leveledAmms get split correctly", async function () {
     const res = await this.route.howToSplitRoutingOnLeveledAmms(
       [
-        toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
-        toStringMap([200 * TEN_TO_18, 400 * TEN_TO_18]),
-        toStringMap([10 * TEN_TO_18, 20 * TEN_TO_18]),
+        toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
+        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+        toStringMap([0.1 * TEN_TO_18, 0.2 * TEN_TO_18]),
       ],
-      `${31 * TEN_TO_18}`
+      `${0.000031 * TEN_TO_18}`
     );
     const [p1, p2, p3]: number[] = res.map((v: BigNumber) => v.toNumber());
     expect(p2 / p1).to.equal(2);
     expect(p1 / p3).to.equal(10);
   });
 
-  // it("Route runs", async function () {
-  //   const tenToTheNine = Math.pow(10, 9);
-  //   const amm = await this.route.route(
-  //     [
-  //       [2000 * tenToTheNine, 4000 * tenToTheNine],
-  //       [1600 * tenToTheNine, 2000 * tenToTheNine],
-  //       [1000 * tenToTheNine, 2000 * tenToTheNine],
-  //     ],
-  //     3 * tenToTheNine
-  //   );
-  //   console.log(amm.toString(), "ROUTE");
-  // });
+  it("Route runs", async function () {
+    //TODO: test this properly
+    const amm = await this.route.routeWrapper(
+      [
+        toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
+        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+        toStringMap([0.1 * TEN_TO_18, 0.2 * TEN_TO_18]),
+      ],
+      `${0.000031 * TEN_TO_18}`
+    );
+    console.log(amm.toString(), "ROUTE");
+  });
 });
 
 // helper functions for testing
@@ -69,11 +69,9 @@ const howMuchXToSpendToLevelAmms = (
   const [x1, y1] = betterAmm;
   const [x2, y2] = worseAmm;
   return (
-    Math.floor(
-      1002 * sqrt(x1 * y2 * (2.257 * Math.pow(10, -6) * x1 * y2 + x2 * y1)) -
-        x1 * y2
-    ) /
-    (y2 * 1000)
+    (1.002 * sqrt(x1 * y2 * (2.257 * Math.pow(10, -6) * x1 * y2 + x2 * y1)) -
+      x1 * y2) /
+    y2
   );
 };
 
