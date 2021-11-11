@@ -28,7 +28,7 @@ library SharedFunctions {
 
     // @notice - this is the Babylonian/Heron's method of finding the square root. It returns an integer value!
     // @param x - the number whose square root we want to find
-    // @return y - the square roorted number (as integer)
+    // @return y - the square rooted number (as integer)
     function sqrt(uint256 x) public pure returns (uint256 y) {
         uint256 z = (x + 1) / 2;
         y = x;
@@ -67,6 +67,38 @@ library SharedFunctions {
     // @return - amount of Y we would get for unit X
     function exchangeRateForY(Structs.Amm memory amm) public pure returns (uint256){
         return quantityOfYForX(amm, 1);
+    }
+
+
+    //(Appendix B, formula 17)
+    // @notice - has potential overflow/underflow issues
+    // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
+    // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
+    // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
+    function howMuchXToSpendToLevelAmmsYX(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaX) {
+        uint256 x1 = betterAmm.x;
+        uint256 x2 = worseAmm.x;
+        uint256 y1 = betterAmm.y;
+        uint256 y2 = worseAmm.y;
+
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+    }
+
+
+    //(Appendix B, formula 17)
+    // @notice - has potential overflow/underflow issues
+    // @param betterAmm - the AMM which has a better price for X; can represent an aggregation of multiple AMMs' liquidity pools.
+    // @param worseAmm - the AMM which as a the worse price for X, i.e. X/Y is lower here than on betterAmm
+    // @return deltaY - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
+    function howMuchXToSpendToLevelAmmsXY(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaY) {
+        uint256 x1 = betterAmm.x;
+        uint256 x2 = worseAmm.x;
+        uint256 y1 = betterAmm.y;
+        uint256 y2 = worseAmm.y;
+
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        deltaY = (1002 * (SharedFunctions.sqrt(y1 * x2) * SharedFunctions.sqrt((y1 * x2 * 2257) / 1_000_000_000 + y2 * x1) - y1 * x2)) / (1000 * x2);
     }
 
 

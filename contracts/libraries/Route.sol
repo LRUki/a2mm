@@ -68,7 +68,7 @@ library Route {
             uint256 i = j - 1;
             uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
-            routeHelper.deltaX = _howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, nextBestAmm);
+            routeHelper.deltaX = howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, nextBestAmm);
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
             if (routeHelper.deltaX == 0) {
                 routeHelper.aggregatedPool.x += nextBestAmm.x;
@@ -84,7 +84,7 @@ library Route {
                 amountOfX = 0;
                 shouldArbitrage = true;
                 uint256 deltaXWorst;
-                deltaXWorst = _howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, routeHelper.worstAmm);
+                deltaXWorst = howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, routeHelper.worstAmm);
                 if (deltaXWorst == 0) {
                     shouldArbitrage = false;
                 }
@@ -150,22 +150,6 @@ library Route {
         return (amm1Part, amm2Part);
     }
 
-
-    //(Appendix B, formula 17)
-    // @notice - has potential overflow/underflow issues
-    // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
-    // @param worseAmm - the AMM which as a the worse price for Y.
-    // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function _howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) private pure returns (uint256 deltaX) {
-        uint256 x1 = betterAmm.x;
-        uint256 x2 = worseAmm.x;
-        uint256 y1 = betterAmm.y;
-        uint256 y2 = worseAmm.y;
-
-        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
-    }
-
     function howToSplitRoutingOnLeveledAmms(uint256[2][] memory ammsArray, uint256 deltaX) public pure returns (uint256[] memory) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i) {
@@ -174,11 +158,11 @@ library Route {
         return _howToSplitRoutingOnLeveledAmms(amms, deltaX);
     }
 
-    function howMuchXToSpendToLevelAmms(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
+    function howMuchXToSpendToLevelAmmsYX(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
 
         Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
         Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
 
-        return _howMuchXToSpendToLevelAmms(betterAmm, worseAmm);
+        return howMuchXToSpendToLevelAmmsYX(betterAmm, worseAmm);
     }
 }
