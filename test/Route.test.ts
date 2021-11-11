@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
+import { BigNumber } from "@ethersproject/bignumber";
 const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== Route ====================================", function () {
   before(async function () {
@@ -16,14 +17,15 @@ describe("==================================== Route ===========================
 
   it("calculates x to spend on better amm to approach the worse amm", async function () {
     const res = await this.route.howMuchXToSpendToLevelAmms(
-      toStringMap([100 * TEN_TO_18, 212.323 * TEN_TO_18]),
-      toStringMap([100 * TEN_TO_18, 183.123 * TEN_TO_18])
+      toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
+      toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-    console.log(res.toString(), "x to approach the worse amm");
+    //TODO: how to match the results?
+    console.log(res.toString(), "x to approach the worse amm in Solidity");
     console.log(
       howMuchXToSpendToLevelAmms(
-        [100 * TEN_TO_18, 212.323 * TEN_TO_18],
-        [100 * TEN_TO_18, 183.123 * TEN_TO_18]
+        [100 * TEN_TO_18, 200 * TEN_TO_18],
+        [100 * TEN_TO_18, 180 * TEN_TO_18]
       ),
       "x to approach the worse amm JS"
     );
@@ -38,7 +40,9 @@ describe("==================================== Route ===========================
       ],
       `${31 * TEN_TO_18}`
     );
-    console.log(res.toString(), "HERE");
+    const [p1, p2, p3]: number[] = res.map((v: BigNumber) => v.toNumber());
+    expect(p2 / p1).to.equal(2);
+    expect(p1 / p3).to.equal(10);
   });
 
   // it("Route runs", async function () {
@@ -65,9 +69,20 @@ const howMuchXToSpendToLevelAmms = (
   const [x1, y1] = betterAmm;
   const [x2, y2] = worseAmm;
   return (
-    (1.002 *
-      Math.sqrt(x1 * y2 * (2.257 * Math.pow(10, -6) * x1 * y2 + x2 * y1)) -
-      x1 * y2) /
-    y2
+    Math.floor(
+      1002 * sqrt(x1 * y2 * (2.257 * Math.pow(10, -6) * x1 * y2 + x2 * y1)) -
+        x1 * y2
+    ) /
+    (y2 * 1000)
   );
+};
+
+const sqrt = (x: number): number => {
+  let z = Math.floor((x + 1) / 2);
+  let y = x;
+  while (z < y) {
+    y = z;
+    z = Math.floor((Math.floor(x / z) + z) / 2);
+  }
+  return y;
 };
