@@ -24,7 +24,7 @@ library Route {
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
     function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
-        for (uint8 i = 0; i < ammsArray.length; ++i) {
+        for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
         }
         return route(amms, amountOfX);
@@ -65,7 +65,8 @@ library Route {
 
         shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
-        for (uint256 i = amms.length - 2; i >= 0; --i) {
+        for (uint256 j = amms.length - 1; j > 0; --j) {
+            uint256 i = j - 1;
             uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
             routeHelper.deltaX = _howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, nextBestAmm);
@@ -93,7 +94,14 @@ library Route {
             totalY += SharedFunctions.quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
 
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
-            _updateAmmsAndSplits(routeHelper.elemsAddedToLeveledAmmIndices, xSellYGain, amms, routeHelper.leveledAmms, routeHelper.sortedIndices, routeHelper.deltaX);
+            uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
+            for (uint256 j = 0; j < routeHelper.elemsAddedToLeveledAmmIndices; ++j) {
+                uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[j], splits[j]);
+                xSellYGain[routeHelper.sortedIndices[j]].x += splits[j];
+                xSellYGain[routeHelper.sortedIndices[j]].y += yGain;
+                amms[routeHelper.sortedIndices[j]].x += splits[j];
+                amms[routeHelper.sortedIndices[j]].y -= yGain;
+            }
 
             if (routeHelper.hasXRunOut) {
                 break;
@@ -101,20 +109,6 @@ library Route {
 
             amountOfX -= routeHelper.deltaX;
             routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
-        }
-    }
-
-
-    function _updateAmmsAndSplits(uint256 elemsAddedToLeveledAmmIndices, Structs.XSellYGain[] memory xSellYGain,
-        Structs.Amm[] memory amms, Structs.Amm[] memory leveledAmms, uint256[] memory sortedIndices, uint256 deltaX)
-    pure private {
-        uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(leveledAmms, deltaX);
-        for (uint256 j = 0; j < elemsAddedToLeveledAmmIndices; ++j) {
-            uint256 yGain = SharedFunctions.quantityOfYForX(leveledAmms[j], splits[j]);
-            xSellYGain[sortedIndices[j]].x += splits[j];
-            xSellYGain[sortedIndices[j]].y += yGain;
-            amms[sortedIndices[j]].x += splits[j];
-            amms[sortedIndices[j]].y -= yGain;
         }
     }
 
