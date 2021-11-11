@@ -20,22 +20,20 @@ contract Swap {
         Structs.XSellYGain[] memory routingsAndGains;
         (routingsAndGains, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
-        for (int256 i = 0; i < amms.length; i++) {
+        for (uint256 i = 0; i < amms.length; i++) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routingsAndGains[i].x, 0);
-            amms[i].x -= routingsAndGains[i].x;
-            amms[i].y += routingsAndGains[i].y;
         }
-
         if (shouldArbitrage) {
-            Structs.AmountsToSendToAmm[] memory arbitrages;
-            (shouldArbitrage, arbitrages, flashLoanRequiredAmount) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
-            if (shouldArbitrage) {
-                for (int256 i = 0; i < amms.length; i++) {
-                    //If we are adding an extra step after arbitrage, we might want to update the AMMs here once again.
-                    amountsToSendToAmms[i].x += arbitrages[i].x;
-                    amountsToSendToAmms[i].y += arbitrages[i].y;
-                }
-            }
+//            Structs.AmountsToSendToAmm[] memory arbitrages;
+//            (shouldArbitrage, arbitrages, flashLoanRequiredAmount) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
+//            if (shouldArbitrage) {
+//                for (uint256 i = 0; i < amms.length; i++) {
+//                    //If we are adding an extra step after arbitrage, we might want to update the AMMs here once again.
+//                    amountsToSendToAmms[i].x += arbitrages[i].x;
+//                    amountsToSendToAmms[i].y += arbitrages[i].y;
+//                }
+//            }
         }
+        flashLoanRequiredAmount = 0;
     }
 }
