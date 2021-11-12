@@ -1,7 +1,7 @@
+import { BigNumber } from "@ethersproject/bignumber";
+import deployContract from "../scripts/utils/deploy";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import deployContract from "../scripts/utils/deploy";
-import { BigNumber } from "@ethersproject/bignumber";
 const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== Route ====================================", function () {
   before(async function () {

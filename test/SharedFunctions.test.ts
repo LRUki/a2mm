@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
+const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== SharedFunctions ====================================", function () {
   before(async function () {
     this.SharedFunctions = await ethers.getContractFactory("SharedFunctions");
@@ -17,4 +18,59 @@ describe("==================================== SharedFunctions =================
     res = await this.sharedFunctions.sqrt(num);
     expect(res.toString()).to.equal(Math.floor(Math.sqrt(num)).toString());
   });
+
+  it("quantityOfYForX gives correct output", async function () {
+    const res = await this.sharedFunctions.quantityOfYForX(
+      toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
+      `${200}`
+    );
+    console.log(res.toString(), "x to approach in Solidity");
+    const exp = quantityOfYForX(
+      [100 * TEN_TO_18, 200 * TEN_TO_18],
+      200
+    );
+    console.log(
+      exp,
+      "x to approach in TSX"
+    );
+  });
+
+  it("sortAmmArrayIndicesByExchangeRate gives correct output", async function () {
+    let testExamples =
+      [
+        {
+          ammsArray: [
+            toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([1 * TEN_TO_18, 4 * TEN_TO_18]),
+            toStringMap([0.2 * TEN_TO_18, 0.2 * TEN_TO_18]),
+          ],
+          result: [2, 0, 1]
+        },
+        {
+          ammsArray: [
+            toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+            toStringMap([0.2 * TEN_TO_18, 0.4 * TEN_TO_18]),
+          ],
+          result: [0, 1, 2]
+        },
+      ]
+    for (const element of testExamples) {
+      const res = await this.sharedFunctions.sortAmmArrayIndicesByExchangeRate(element.ammsArray)
+      expect(res.toString()).to.equal((element.result).toString());
+    }
+  });
 });
+
+// helper functions for testing
+const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
+
+const quantityOfYForX = (
+  amm: number[],
+  z: number
+): number => {
+  const [x, y] = amm;
+  let q = y / (1000 * x + 997 * z);
+  let r = y - q * (1000 * x + 997 * z); //r = y % (1000*amm.x + 997*x)
+  return 1000 * z * q + 1000 * z * r / (1000 * x + 997 * z);
+};

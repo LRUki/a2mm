@@ -41,7 +41,7 @@ library Route {
         xSellYGain = new Structs.XSellYGain[](amms.length);
 
         if (amms.length == 1) {
-            totalY = SharedFunctions.quantityOfYForX(amms[0], amountOfX);
+            totalY = SharedFunctions._quantityOfYForX(amms[0], amountOfX);
             xSellYGain[0].x = amountOfX;
             xSellYGain[0].y = totalY;
             return (xSellYGain, totalY, false);
@@ -49,7 +49,7 @@ library Route {
 
         RouteHelper memory routeHelper = RouteHelper(
         // Sort the AMMs - best to worst in exchange rate.
-            SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
+            SharedFunctions._sortAmmArrayIndicesByExchangeRate(amms)
         , Structs.Amm(amms[0].x, amms[0].y)
         , Structs.Amm(0, 0)
         , 0
@@ -90,12 +90,12 @@ library Route {
                 }
                 routeHelper.hasXRunOut = true;
             }
-            totalY += SharedFunctions.quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
+            totalY += SharedFunctions._quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
 
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
             uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
             for (uint256 j = 0; j < routeHelper.elemsAddedToLeveledAmmIndices; ++j) {
-                uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[j], splits[j]);
+                uint256 yGain = SharedFunctions._quantityOfYForX(routeHelper.leveledAmms[j], splits[j]);
                 xSellYGain[routeHelper.sortedIndices[j]].x += splits[j];
                 xSellYGain[routeHelper.sortedIndices[j]].y += yGain;
                 amms[routeHelper.sortedIndices[j]].x += splits[j];
