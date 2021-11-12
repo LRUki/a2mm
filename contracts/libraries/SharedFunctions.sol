@@ -45,7 +45,7 @@ library SharedFunctions {
     // @param dx - how much of X we are willing to potentially spend
     // @return amountOut - how much of Y we would get if we traded x of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
-        require(dx > 0, "Insuficcient 'dx'");
+        require(dx > 0, "Insufficient 'dx'");
         require(x > 0 && y > 0, "Insufficient liquidity: x or y");
         uint amountInWithFee = dx * 997;
         uint numerator = amountInWithFee * y;
