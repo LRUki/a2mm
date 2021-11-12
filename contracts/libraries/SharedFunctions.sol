@@ -82,7 +82,16 @@ library SharedFunctions {
         uint256 y2 = worseAmm.y;
 
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaX = (1002 * (SharedFunctions.sqrt(x1 * y2) * SharedFunctions.sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+        deltaX = (1002 * (sqrt(x1 * y2) * sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+    }
+
+
+    function howMuchXToSpendToLevelAmmsYXWrapper(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
+
+        Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
+        Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
+
+        return howMuchXToSpendToLevelAmmsYX(betterAmm, worseAmm);
     }
 
 
@@ -98,7 +107,7 @@ library SharedFunctions {
         uint256 y2 = worseAmm.y;
 
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaY = (1002 * (SharedFunctions.sqrt(y1 * x2) * SharedFunctions.sqrt((y1 * x2 * 2257) / 1_000_000_000 + y2 * x1) - y1 * x2)) / (1000 * x2);
+        deltaY = (1002 * (sqrt(y1 * x2) * sqrt((y1 * x2 * 2257) / 1_000_000_000 + y2 * x1) - y1 * x2)) / (1000 * x2);
     }
 
 
@@ -120,6 +129,34 @@ library SharedFunctions {
                 --j;
             }
             indices[j] = tmp;
+        }
+    }
+
+
+    function howToSplitRoutingOnLeveledAmmsWrapper(uint256[2][] memory ammsArray, uint256 deltaX) public pure returns (uint256[] memory) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return howToSplitRoutingOnLeveledAmms(amms, deltaX);
+    }
+
+
+    // @notice - we might have overflow issues; also, it's possible that not all of 'deltaX' is spend due to how integer division rounds down
+    // @param amms - all of the AMMs we are considering to route between
+    // @param deltaX - how much of X we are looking to split among the AMMs
+    // @return splits - an array telling us how much of X to send to each of the leveled AMMs
+    function howToSplitRoutingOnLeveledAmms(Structs.Amm[] memory amms, uint256 deltaX) public pure returns (uint256[] memory splits) {
+        uint256 numberOfAmms = amms.length;
+        splits = new uint256[](numberOfAmms);
+
+        uint256 sumX = 0;
+        for (uint256 i = 0; i < numberOfAmms; ++i) {
+            sumX += amms[i].x;
+        }
+        // We just take the weighted average to know how to split our spending:
+        for (uint256 i = 0; i < numberOfAmms; ++i) {
+            splits[i] = (amms[i].x * deltaX) / sumX;
         }
     }
 }

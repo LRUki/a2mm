@@ -53,28 +53,29 @@ library Arbitrage {
     // @notice - we might have overflow or underflow issues here, especially for 'dy' variable
     // @param amms - the AMMs we are considering doing arbitrage between
     // @return
-    function _arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld) pure returns (bool, Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function _arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld) pure private returns (bool, Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
         uint256 l = 0;
         uint256 r = amms.length - 1;
         Structs.Amm memory ML = Structs.Amm(amms[sortedIndices[l]].x, amms[sortedIndices[l]].y);
         Structs.Amm memory MR = Structs.Amm(amms[sortedIndices[r]].x, amms[sortedIndices[r]].y);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
-        for (i = 0; i < amms.length; ++i) {
+        for (uint256 i = 0; i < amms.length; ++i) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(0, 0);
         }
 
         while (false) {
             uint256 dyOpt = _optimalAmountToSpendOnArbitrage(MR, ML);
-            uint256 dyBar = howMuchXToSpendToLevelAmmsXY(ML, amms[sortedIndices[l+1]]);
+            uint256 dyBar = SharedFunctions.howMuchXToSpendToLevelAmmsXY(ML, amms[sortedIndices[l+1]]);
 
             //The amount we would need to spend, in terms of X, to level out the aggregated AMMs ML with the next
             // cheapest AMM;
-            uint256 dxBar = howMuchXToSpendToLevelAmmsYX(MR, amms[sortedIndices[r-1]]);
+            uint256 dxBar = SharedFunctions.howMuchXToSpendToLevelAmmsYX(MR, amms[sortedIndices[r-1]]);
             //We then need to find out how much Y we need to spend to actually get the above mentioned amount of X. This
             // just involves inverting the second formula from (16) to make d_y the subject.
             // Note that if the comission fee is no 0.3%, then this formula would differ:
-            uint256 dy = (1000*x*y - 1000*y*dxBar) / (997*dxBar);
+//            uint256 dy = (1000*x*y - 1000*y*dxBar) / (997*dxBar);
+
         }
 
         return (false, amountsToSendToAmms, 42);

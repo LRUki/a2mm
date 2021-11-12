@@ -68,7 +68,7 @@ library Route {
             uint256 i = j - 1;
             uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
             Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
-            routeHelper.deltaX = howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, nextBestAmm);
+            routeHelper.deltaX = SharedFunctions.howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, nextBestAmm);
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
             if (routeHelper.deltaX == 0) {
                 routeHelper.aggregatedPool.x += nextBestAmm.x;
@@ -84,7 +84,7 @@ library Route {
                 amountOfX = 0;
                 shouldArbitrage = true;
                 uint256 deltaXWorst;
-                deltaXWorst = howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, routeHelper.worstAmm);
+                deltaXWorst = SharedFunctions.howMuchXToSpendToLevelAmmsYX(routeHelper.aggregatedPool, routeHelper.worstAmm);
                 if (deltaXWorst == 0) {
                     shouldArbitrage = false;
                 }
@@ -93,13 +93,13 @@ library Route {
             totalY += SharedFunctions.quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
 
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
-            uint256[] memory splits = _howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
-            for (uint256 j = 0; j < routeHelper.elemsAddedToLeveledAmmIndices; ++j) {
-                uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[j], splits[j]);
-                xSellYGain[routeHelper.sortedIndices[j]].x += splits[j];
-                xSellYGain[routeHelper.sortedIndices[j]].y += yGain;
-                amms[routeHelper.sortedIndices[j]].x += splits[j];
-                amms[routeHelper.sortedIndices[j]].y -= yGain;
+            uint256[] memory splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
+            for (uint256 k = 0; k < routeHelper.elemsAddedToLeveledAmmIndices; ++k) {
+                uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[k], splits[k]);
+                xSellYGain[routeHelper.sortedIndices[k]].x += splits[k];
+                xSellYGain[routeHelper.sortedIndices[k]].y += yGain;
+                amms[routeHelper.sortedIndices[k]].x += splits[k];
+                amms[routeHelper.sortedIndices[k]].y -= yGain;
             }
 
             if (routeHelper.hasXRunOut) {
@@ -108,25 +108,6 @@ library Route {
 
             amountOfX -= routeHelper.deltaX;
             routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
-        }
-    }
-
-
-    // @notice - we might have overflow issues; also, it's possible that not all of 'deltaX' is spend due to how integer division rounds down
-    // @param amms - all of the AMMs we are considering to route between
-    // @param deltaX - how much of X we are looking to split among the AMMs
-    // @return splits - an array telling us how much of X to send to each of the leveled AMMs
-    function _howToSplitRoutingOnLeveledAmms(Structs.Amm[] memory amms, uint256 deltaX) private pure returns (uint256[] memory splits) {
-        uint256 numberOfAmms = amms.length;
-        splits = new uint256[](numberOfAmms);
-
-        uint256 sumX = 0;
-        for (uint256 i = 0; i < numberOfAmms; ++i) {
-            sumX += amms[i].x;
-        }
-        // We just take the weighted average to know how to split our spending:
-        for (uint256 i = 0; i < numberOfAmms; ++i) {
-            splits[i] = (amms[i].x * deltaX) / sumX;
         }
     }
 
@@ -148,21 +129,5 @@ library Route {
             amm2Part += leftover;
         }
         return (amm1Part, amm2Part);
-    }
-
-    function howToSplitRoutingOnLeveledAmms(uint256[2][] memory ammsArray, uint256 deltaX) public pure returns (uint256[] memory) {
-        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
-        for (uint8 i = 0; i < ammsArray.length; ++i) {
-            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
-        }
-        return _howToSplitRoutingOnLeveledAmms(amms, deltaX);
-    }
-
-    function howMuchXToSpendToLevelAmmsYX(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
-
-        Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
-        Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
-
-        return howMuchXToSpendToLevelAmmsYX(betterAmm, worseAmm);
     }
 }
