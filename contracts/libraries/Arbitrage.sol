@@ -18,7 +18,7 @@ library Arbitrage {
     // @return flashLoanRequiredAmount - how large of a flash loan is required to complete the arbitrage
     function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public pure returns (bool, Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
-//        return (false, amountsToSendToAmms, 42);
+        //        return (false, amountsToSendToAmms, 42);
         return _arbitrageForY(amms, amountOfYHeld);
     }
 
@@ -54,27 +54,34 @@ library Arbitrage {
     // @param amms - the AMMs we are considering doing arbitrage between
     // @return
     function _arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld) pure private returns (bool, Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
-        uint256[] memory sortedIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
+        uint256[] memory sortedAmmIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
         uint256 l = 0;
         uint256 r = amms.length - 1;
-        Structs.Amm memory ML = Structs.Amm(amms[sortedIndices[l]].x, amms[sortedIndices[l]].y);
-        Structs.Amm memory MR = Structs.Amm(amms[sortedIndices[r]].x, amms[sortedIndices[r]].y);
+        Structs.Amm memory ML = Structs.Amm(amms[sortedAmmIndices[l]].x, amms[sortedAmmIndices[l]].y);
+        Structs.Amm memory MR = Structs.Amm(amms[sortedAmmIndices[r]].x, amms[sortedAmmIndices[r]].y);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
+        Structs.Amm[] memory sortedAmms = new Structs.Amm[](amms.length);
         for (uint256 i = 0; i < amms.length; ++i) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(0, 0);
+            sortedAmms[i] = amms[sortedAmmIndices[i]];
         }
 
+        flashLoanRequiredAmount = 0;
         while (false) {
-            uint256 dyOpt = _optimalAmountToSpendOnArbitrage(MR, ML);
-            uint256 dyBar = SharedFunctions.howMuchXToSpendToLevelAmmsXY(ML, amms[sortedIndices[l+1]]);
+//            uint256 dyOpt = _optimalAmountToSpendOnArbitrage(MR, ML);
+            uint256 dyBar = SharedFunctions.howMuchYToSpendToLevelAmms(ML, amms[sortedAmmIndices[l + 1]]);
 
             //The amount we would need to spend, in terms of X, to level out the aggregated AMMs ML with the next
             // cheapest AMM;
-            uint256 dxBar = SharedFunctions.howMuchXToSpendToLevelAmmsYX(MR, amms[sortedIndices[r-1]]);
+            uint256 dxBar = SharedFunctions.howMuchXToSpendToLevelAmms(MR, amms[sortedAmmIndices[r - 1]]);
             //We then need to find out how much Y we need to spend to actually get the above mentioned amount of X. This
             // just involves inverting the second formula from (16) to make d_y the subject.
-            // Note that if the comission fee is no 0.3%, then this formula would differ:
-//            uint256 dy = (1000*x*y - 1000*y*dxBar) / (997*dxBar);
+            // Note that if the commission fee is not 0.3% (or the formula is not xy=k), then this would differ:
+            uint256 dy = (1000 * ML.x * ML.y - 1000 * ML.y * dxBar) / (997 * dxBar);
+
+            if (dyBar < dy) {
+
+            }
 
         }
 

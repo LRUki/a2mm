@@ -24,7 +24,7 @@ describe("==================================== SharedFunctions =================
   const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
 
   it("calculates x to spend on better amm to approach the worse amm", async function () {
-    const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsYXWrapper(
+    const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsWrapper(
         toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
         toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );

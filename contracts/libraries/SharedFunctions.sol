@@ -49,9 +49,10 @@ library SharedFunctions {
         // fixed commissionFee = 0.003;
         // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
         // as:
-        uint256 q = y / (1000*x + 997*dx);
-        uint256 r = y - q*(1000*x + 997*dx); //r = y % (1000*amm.x + 997*x)
-        return 1000*dx*q + 1000*dx*r/(1000*x + 997*dx);
+        uint256 q = y / (1000 * x + 997 * dx);
+        uint256 r = y - q * (1000 * x + 997 * dx);
+        //r = y % (1000*amm.x + 997*x)
+        return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
     }
 
     function quantityOfYForX(Structs.Amm memory amm, uint256 dx) public pure returns (uint256){
@@ -70,28 +71,33 @@ library SharedFunctions {
     }
 
 
+    function howMuchToSpendToLevelAmms(uint256 t1_1, uint256 t1_2, uint256 t2_1, uint256 t2_2) private pure returns (uint256 delta) {
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        delta = (1002 * (sqrt(t1_1 * t2_2) * sqrt((t1_1 * t2_2 * 2257) / 1_000_000_000 + t1_2 * t2_1) - t1_1 * t2_2)) / (1000 * t2_2);
+    }
+
+
     //(Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchXToSpendToLevelAmmsYX(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaX) {
+    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaX) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
         uint256 y2 = worseAmm.y;
 
-        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaX = (1002 * (sqrt(x1 * y2) * sqrt((x1 * y2 * 2257) / 1_000_000_000 + x2 * y1) - x1 * y2)) / (1000 * y2);
+        return howMuchToSpendToLevelAmms(x1, x2, y1, y2);
     }
 
 
-    function howMuchXToSpendToLevelAmmsYXWrapper(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
+    function howMuchXToSpendToLevelAmmsWrapper(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
 
         Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
         Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
 
-        return howMuchXToSpendToLevelAmmsYX(betterAmm, worseAmm);
+        return howMuchXToSpendToLevelAmms(betterAmm, worseAmm);
     }
 
 
@@ -100,14 +106,13 @@ library SharedFunctions {
     // @param betterAmm - the AMM which has a better price for X; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for X, i.e. X/Y is lower here than on betterAmm
     // @return deltaY - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchXToSpendToLevelAmmsXY(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaY) {
+    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaY) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
         uint256 y2 = worseAmm.y;
 
-        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        deltaY = (1002 * (sqrt(y1 * x2) * sqrt((y1 * x2 * 2257) / 1_000_000_000 + y2 * x1) - y1 * x2)) / (1000 * x2);
+        return howMuchToSpendToLevelAmms(y1, y2, x1, x2);
     }
 
 
