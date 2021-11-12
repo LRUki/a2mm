@@ -43,21 +43,21 @@ library SharedFunctions {
     // @param x - the amount of X in the AMM we are looking to trade at
     // @param y - the amount of Y in the AMM we are looking to trade at
     // @param dx - how much of X we are willing to potentially spend
-    // @return - how much of Y we would get if we traded x of X for Y
-    function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256){
-        // float and int multiplication is not supported, so we have to rewrite:
-        // fixed commissionFee = 0.003;
-        // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
-        // as:
-        uint256 q = y / (1000 * x + 997 * dx);
-        uint256 r = y - q * (1000 * x + 997 * dx);
-        //r = y % (1000*amm.x + 997*x)
-        return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
+    // @return amountOut - how much of Y we would get if we traded x of X for Y
+    function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
+        require(dx > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
+        require(x > 0 && y > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        uint amountInWithFee = dx * 997;
+        uint numerator = amountInWithFee * y;
+        uint denominator = x * 1000 + amountInWithFee;
+        amountOut = numerator / denominator;
     }
+
 
     function quantityOfYForX(Structs.Amm memory amm, uint256 dx) public pure returns (uint256){
         return quantityOfYForX(amm.x, amm.y, dx);
     }
+
 
     function quantityOfXForY(Structs.Amm memory amm, uint256 dy) public pure returns (uint256){
         return quantityOfYForX(amm.y, amm.x, dy);
@@ -149,19 +149,41 @@ library SharedFunctions {
 
     // @notice - we might have overflow issues; also, it's possible that not all of 'deltaX' is spend due to how integer division rounds down
     // @param amms - all of the AMMs we are considering to route between
-    // @param deltaX - how much of X we are looking to split among the AMMs
-    // @return splits - an array telling us how much of X to send to each of the leveled AMMs
-    function howToSplitRoutingOnLeveledAmms(Structs.Amm[] memory amms, uint256 deltaX) public pure returns (uint256[] memory splits) {
+    // @param delta - how much of a token we are looking to split among the AMMs
+    // @param updateAmms - whether the AMMs' x and y values should be updated with the newly calculated x (and then corresponding y) values.
+    // @return splits - an array telling us how much of the token to send to each of the leveled AMMs
+    function howToSplitRoutingOnLeveledAmms(Structs.Amm[] memory amms, uint256 delta) public pure returns (uint256[] memory splits) {
         uint256 numberOfAmms = amms.length;
         splits = new uint256[](numberOfAmms);
 
         uint256 sumX = 0;
+        uint256 sumY = 0;
         for (uint256 i = 0; i < numberOfAmms; ++i) {
             sumX += amms[i].x;
+            sumY += amms[i].y;
         }
+
+        //We prefer working with smaller numbers - less likely to run into overflow issues or losing
+        // precision on division
+        uint256 smallerDenom;
+        bool areXsSmaller;
+        if (sumX < sumY) {
+            smallerDenom = sumX;
+            areXsSmaller = true;
+        } else {
+            smallerDenom = sumY;
+            areXsSmaller = false;
+        }
+
         // We just take the weighted average to know how to split our spending:
-        for (uint256 i = 0; i < numberOfAmms; ++i) {
-            splits[i] = (amms[i].x * deltaX) / sumX;
+        if (areXsSmaller) {
+            for (uint256 i = 0; i < numberOfAmms; ++i) {
+                splits[i] = (amms[i].x * delta) / sumX;
+            }
+        } else {
+            for (uint256 i = 0; i < numberOfAmms; ++i) {
+                splits[i] = (amms[i].y * delta) / sumY;
+            }
         }
     }
 }

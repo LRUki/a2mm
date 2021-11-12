@@ -49,40 +49,105 @@ library Arbitrage {
     }
 
 
+    struct ArbHelper {
+        uint256[] sortedAmmIndices;
+        uint256 l;
+        uint256 r;
+        Structs.Amm ML;
+        Structs.Amm MR;
+        Structs.Amm[] sortedAmms;
+        uint256 dyBar;
+        uint256 dxBar;
+        uint256 dy;
+        bool increaseLow;
+    }
+
+
     //(Appendix D)
     // @notice - we might have overflow or underflow issues here, especially for 'dy' variable
     // @param amms - the AMMs we are considering doing arbitrage between
     // @return
     function _arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld) pure private returns (bool, Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
-        uint256[] memory sortedAmmIndices = SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms);
-        uint256 l = 0;
-        uint256 r = amms.length - 1;
-        Structs.Amm memory ML = Structs.Amm(amms[sortedAmmIndices[l]].x, amms[sortedAmmIndices[l]].y);
-        Structs.Amm memory MR = Structs.Amm(amms[sortedAmmIndices[r]].x, amms[sortedAmmIndices[r]].y);
+        ArbHelper memory arbHelper = ArbHelper(
+            SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
+        , 0
+        , amms.length - 1
+        , Structs.Amm(0, 0)
+        , Structs.Amm(0, 0)
+        , new Structs.Amm[](amms.length)
+        , 0
+        , 0
+        , 0
+        , false
+        );
+        arbHelper.ML = Structs.Amm(amms[arbHelper.sortedAmmIndices[arbHelper.l]].x, amms[arbHelper.sortedAmmIndices[arbHelper.l]].y);
+        arbHelper.MR = Structs.Amm(amms[arbHelper.sortedAmmIndices[arbHelper.r]].x, amms[arbHelper.sortedAmmIndices[arbHelper.r]].y);
+
+
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
-        Structs.Amm[] memory sortedAmms = new Structs.Amm[](amms.length);
         for (uint256 i = 0; i < amms.length; ++i) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(0, 0);
-            sortedAmms[i] = amms[sortedAmmIndices[i]];
+            //TODO: Here we are assuming that the AMMs are taken by reference and not by value. Make sure this is the case
+            arbHelper.sortedAmms[i] = amms[arbHelper.sortedAmmIndices[i]];
         }
 
         flashLoanRequiredAmount = 0;
-        while (false) {
-//            uint256 dyOpt = _optimalAmountToSpendOnArbitrage(MR, ML);
-            uint256 dyBar = SharedFunctions.howMuchYToSpendToLevelAmms(ML, amms[sortedAmmIndices[l + 1]]);
+        while (arbHelper.l < arbHelper.r) {
+            //            uint256 dyOpt = _optimalAmountToSpendOnArbitrage(arbHelper.MR, arbHelper.ML);
+            arbHelper.dyBar = SharedFunctions.howMuchYToSpendToLevelAmms(arbHelper.ML, amms[arbHelper.sortedAmmIndices[arbHelper.l + 1]]);
 
             //The amount we would need to spend, in terms of X, to level out the aggregated AMMs ML with the next
             // cheapest AMM;
-            uint256 dxBar = SharedFunctions.howMuchXToSpendToLevelAmms(MR, amms[sortedAmmIndices[r - 1]]);
+            arbHelper.dxBar = SharedFunctions.howMuchXToSpendToLevelAmms(arbHelper.MR, amms[arbHelper.sortedAmmIndices[arbHelper.r - 1]]);
             //We then need to find out how much Y we need to spend to actually get the above mentioned amount of X. This
             // just involves inverting the second formula from (16) to make d_y the subject.
             // Note that if the commission fee is not 0.3% (or the formula is not xy=k), then this would differ:
-            uint256 dy = (1000 * ML.x * ML.y - 1000 * ML.y * dxBar) / (997 * dxBar);
+            arbHelper.dy = (1000 * arbHelper.ML.x * arbHelper.ML.y - 1000 * arbHelper.ML.y * arbHelper.dxBar) / (997 * arbHelper.dxBar);
 
-            if (dyBar < dy) {
+            uint256[] memory ySplits;
+            //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
+            Structs.Amm[] memory sortedAmmsUpTol = new Structs.Amm[](amms.length - arbHelper.r);
+            for (uint256 k = 0; k <= arbHelper.l; ++k) {
+                sortedAmmsUpTol[k - arbHelper.r] = arbHelper.sortedAmms[k];
+            }
+            //            Structs.Amm[] memory sortedAmmsUpTol = arbHelper.sortedAmms[: arbHelper.l + 1];
 
+            if (arbHelper.dyBar < arbHelper.dy) {
+                ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, arbHelper.dyBar);
+                arbHelper.increaseLow = true;
+            } else {
+                ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, arbHelper.dy);
             }
 
+            uint256 xGainSum = 0;
+            for (uint256 k = 0; k <= arbHelper.l; ++k) {
+                uint256 xGain = SharedFunctions.quantityOfXForY(arbHelper.sortedAmms[k], ySplits[k]);
+                xGainSum += xGain;
+                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].y += ySplits[k];
+                amms[arbHelper.sortedAmmIndices[k]].y += ySplits[k];
+                amms[arbHelper.sortedAmmIndices[k]].x -= xGain;
+            }
+
+            //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
+            Structs.Amm[] memory sortedAmmsrToEnd = new Structs.Amm[](amms.length - arbHelper.r);
+            for (uint256 k = arbHelper.r; k < amms.length; ++k) {
+                sortedAmmsrToEnd[k - arbHelper.r] = arbHelper.sortedAmms[k];
+            }
+            //            Structs.Amm[] memory sortedAmmsrToEnd = arbHelper.sortedAmms[arbHelper.r:];
+
+            uint256[] memory xSplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsrToEnd, xGainSum);
+            for (uint256 k = arbHelper.r; k < amms.length; ++k) {
+                uint256 yGain = SharedFunctions.quantityOfXForY(arbHelper.sortedAmms[k], xSplits[k - arbHelper.r]);
+                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].x += xSplits[k - arbHelper.r];
+                amms[arbHelper.sortedAmmIndices[k]].x += xSplits[k - arbHelper.r];
+                amms[arbHelper.sortedAmmIndices[k]].y -= yGain;
+            }
+
+            if (arbHelper.increaseLow) {
+                ++arbHelper.l;
+            } else {
+                --arbHelper.r;
+            }
         }
 
         return (false, amountsToSendToAmms, 42);
