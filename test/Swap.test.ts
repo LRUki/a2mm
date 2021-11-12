@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { expect, assert } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
+import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 import {
   convertEthToWETH,
   getBalanceOfERC20,
@@ -36,13 +37,13 @@ describe("==================================== Swap ============================
   });
 
   it("ERC is converted", async function () {
-    const ETH_AMOUNT = "2";
+    const ETH_AMOUNT = "10";
 
     const [signer] = await ethers.getSigners();
     //buy WETH using native ETH
     await convertEthToWETH(signer, this.swap.address, ETH_AMOUNT);
     //allow the swap contract to spend the WETH
-    await approveOurContractToUseWETH(signer, this.swap.address, "1");
+    await approveOurContractToUseWETH(signer, this.swap.address, "10");
 
     const amountOfWETH = await getBalanceOfERC20(
       signer,
@@ -52,12 +53,23 @@ describe("==================================== Swap ============================
       amountOfWETH.toString() == ethers.utils.parseEther(ETH_AMOUNT).toString(),
       "signer didn't recieve WETH!"
     );
-
-    const res = await this.swap.swap(
+    let res = await this.swap.getReserves(
+      factoryToAddress[Factory.UNIV2],
       tokenToAddress[Token.WETH],
-      tokenToAddress[Token.USDT],
-      ethers.utils.parseEther("0.5").toString()
+      tokenToAddress[Token.DAI]
     );
+    console.log(res.toString());
+    await this.swap.swap(
+      tokenToAddress[Token.WETH],
+      tokenToAddress[Token.DAI],
+      ethers.utils.parseEther("10").toString()
+    );
+    res = await this.swap.getReserves(
+      factoryToAddress[Factory.UNIV2],
+      tokenToAddress[Token.WETH],
+      tokenToAddress[Token.DAI]
+    );
+    console.log(res.toString());
   });
 
   // it("Swaps at uni", async function () {

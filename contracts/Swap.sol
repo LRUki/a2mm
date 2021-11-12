@@ -11,6 +11,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap {
@@ -30,31 +31,36 @@ contract Swap {
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
 	    // _dexProvider.getSushiReserves();
-        executeSwap(_uniV2FactoryAddress, tokenIn, tokenOut, amountIn);
+        address pairAddress = IUniswapV2Factory(_uniV2FactoryAddress).getPair(tokenIn, tokenOut);
+		require(pairAddress != address(0), "This pool does not exist");
+        executeSwap(pairAddress, tokenIn, tokenOut, amountIn);
     }
 
 
 
-    function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public {
-        console.log(IERC20(tokenIn).balanceOf(address(this)),"BEFORE");
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
-        console.log(IERC20(tokenIn).balanceOf(address(this)),"AFTER");
+    function executeSwap(address pairAddress, address tokenIn, address tokenOut, uint256 amountIn) public {
+        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom failed, make sure user approved");
+        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
+        (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
+        uint256 amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut); 
+        IERC20(tokenIn).transfer(pairAddress,amountIn);
+        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
+    	IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));
+	}
+
+    //assumes pairAddress exsits and token0, token1 is sorted
+    function getReserves(address factoryAddress, address token0, address token1) public view returns (uint resIn, uint resOut) {
+  		(resIn, resOut,) = IUniswapV2Pair(IUniswapV2Factory(_uniV2FactoryAddress).getPair(token0, token1)).getReserves();
+	}
+
+        // console.log(IERC20(tokenIn).balanceOf(address(this)),"BEFORE");
+        // console.log(IERC20(tokenIn).balanceOf(address(this)),"AFTER");
         // IERC20(tokenIn).approve(address(this),amountIn)
         // IUniswapV2Router02 router = IUniswapV2Router02(_uniV2Router);
         // require(TOKEN.transferFrom(msg.sender, address(this), amountOfX), "transferFrom failed.");
         // require(TOKEN.approve(address(this), amountOfX), 'approve failed.');
-		// address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
-		// require(pairAddress != address(0), "This pool does not exist");
-    	// IUniswapV2Pair(pairAddress).swap(amountOfX, 0, address(this), bytes("not empty"));
-	}
-
-    function getReserves(address factoryAddress, address tokenIn, address tokenOut) public view returns (uint resIn,uint resOut) {
-		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
-		require(pairAddress != address(0), "This pool does not exist");
-		IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-  		(resIn, resOut,) = pair.getReserves();
-	}
-
+		
     
     event Received(address, uint);
     receive() external payable {
