@@ -5,23 +5,63 @@ pragma experimental ABIEncoderV2;
 import "./libraries/Structs.sol";
 import "./libraries/Arbitrage.sol";
 import "./libraries/Route.sol";
+import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import "hardhat/console.sol";
 
 contract Swap {
     address private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    IWETH9 private _WETH;
+
     DexProvider private _dexProvider;
-    
+        
     constructor(address dexProviderAddress) public {
 	    _dexProvider = DexProvider(dexProviderAddress);
+        _WETH = IWETH9(_wethTokenAddress);
     }
 
-    function swap(address tokenIn, address tokenOut, uint256 amountOfX) external {
-	    _dexProvider.executeSwap(_uniV2FactoryAddress, tokenIn, tokenOut, amountOfX);
-    } 
 
+    function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+	    // _dexProvider.getSushiReserves();
+        executeSwap(_uniV2FactoryAddress, tokenIn, tokenOut, amountIn);
+    }
+
+
+
+    function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public {
+        console.log(IERC20(tokenIn).balanceOf(address(this)),"BEFORE");
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        console.log(IERC20(tokenIn).balanceOf(address(this)),"AFTER");
+        // IERC20(tokenIn).approve(address(this),amountIn)
+        // IUniswapV2Router02 router = IUniswapV2Router02(_uniV2Router);
+        // require(TOKEN.transferFrom(msg.sender, address(this), amountOfX), "transferFrom failed.");
+        // require(TOKEN.approve(address(this), amountOfX), 'approve failed.');
+		// address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
+		// require(pairAddress != address(0), "This pool does not exist");
+    	// IUniswapV2Pair(pairAddress).swap(amountOfX, 0, address(this), bytes("not empty"));
+	}
+
+    function getReserves(address factoryAddress, address tokenIn, address tokenOut) public view returns (uint resIn,uint resOut) {
+		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
+		require(pairAddress != address(0), "This pool does not exist");
+		IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+  		(resIn, resOut,) = pair.getReserves();
+	}
+
+    
+    event Received(address, uint);
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+        // _WETH.deposit{value:msg.value}();
+    }
+    
     // @notice - for now, only the first two AMMs in the list will actually be considered for anything
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
