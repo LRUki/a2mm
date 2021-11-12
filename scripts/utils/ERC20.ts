@@ -5,15 +5,42 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 export const convertEthToWETH = async (
   signer: SignerWithAddress,
+  contractAddressToApprove: string,
   amountOfEth: string
-) => {
-  const abi = ["function deposit() payable"];
+): Promise<void> => {
+  const abi = [
+    "function deposit() payable",
+    "function approve(address guy, uint wad) external returns (bool)",
+  ];
   const tokenContract = new ethers.Contract(
     tokenToAddress[Token.WETH],
     abi,
     signer
   );
   await tokenContract.deposit({ value: ethers.utils.parseEther(amountOfEth) });
+  await tokenContract.approve(
+    contractAddressToApprove,
+    ethers.utils.parseEther(amountOfEth)
+  );
+};
+
+export const approveOurContractToUseWETH = async (
+  signer: SignerWithAddress,
+  contractAddressToApprove: string,
+  amountOfEth: string
+): Promise<void> => {
+  const abi = [
+    "function approve(address guy, uint wad) external returns (bool)",
+  ];
+  const tokenContract = new ethers.Contract(
+    tokenToAddress[Token.WETH],
+    abi,
+    signer
+  );
+  await tokenContract.approve(
+    contractAddressToApprove,
+    ethers.utils.parseEther(amountOfEth)
+  );
 };
 
 export const getBalanceOfERC20 = async (
