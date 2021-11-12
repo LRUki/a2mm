@@ -8,17 +8,6 @@ import "hardhat/console.sol";
 
 library Route {
 
-    struct RouteHelper {
-        uint256[] sortedIndices;
-        Structs.Amm aggregatedPool;
-        Structs.Amm worstAmm;
-        uint256 deltaX;
-        Structs.Amm[] leveledAmms;
-        uint256 elemsAddedToLeveledAmmIndices;
-        bool hasXRunOut;
-    }
-
-
     //functions below are only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
     function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
@@ -36,7 +25,7 @@ library Route {
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
     function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
-        require(amms.length >= 1, 'We cannot route to no AMMs! Please provide at least one AMM, as currently your array of amms is empty.');
+        require(amms.length >= 1, "Need at least 1 AMM in 'amms'");
 
         xSellYGain = new Structs.XSellYGain[](amms.length);
 
@@ -129,5 +118,16 @@ library Route {
             amm2Part += leftover;
         }
         return (amm1Part, amm2Part);
+    }
+
+
+    struct RouteHelper {
+        uint256[] sortedIndices;
+        Structs.Amm aggregatedPool;
+        Structs.Amm worstAmm;
+        uint256 deltaX;
+        Structs.Amm[] leveledAmms;
+        uint256 elemsAddedToLeveledAmmIndices;
+        bool hasXRunOut;
     }
 }

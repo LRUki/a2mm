@@ -45,8 +45,8 @@ library SharedFunctions {
     // @param dx - how much of X we are willing to potentially spend
     // @return amountOut - how much of Y we would get if we traded x of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
-        require(dx > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
-        require(x > 0 && y > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
+        require(dx > 0, "Insuficcient 'dx'");
+        require(x > 0 && y > 0, "Insufficient liquidity: x or y");
         uint amountInWithFee = dx * 997;
         uint numerator = amountInWithFee * y;
         uint denominator = x * 1000 + amountInWithFee;
@@ -71,9 +71,9 @@ library SharedFunctions {
     }
 
 
-    function howMuchToSpendToLevelAmms(uint256 t1_1, uint256 t1_2, uint256 t2_1, uint256 t2_2) private pure returns (uint256 delta) {
+    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256 delta) {
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        delta = (1002 * (sqrt(t1_1 * t2_2) * sqrt((t1_1 * t2_2 * 2257) / 1_000_000_000 + t1_2 * t2_1) - t1_1 * t2_2)) / (1000 * t2_2);
+        delta = (1002 * (sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21) - t11 * t22)) / (1000 * t22);
     }
 
 
@@ -88,7 +88,7 @@ library SharedFunctions {
         uint256 y1 = betterAmm.y;
         uint256 y2 = worseAmm.y;
 
-        return howMuchToSpendToLevelAmms(x1, x2, y1, y2);
+        return _howMuchToSpendToLevelAmms(x1, x2, y1, y2);
     }
 
 
@@ -112,7 +112,7 @@ library SharedFunctions {
         uint256 y1 = betterAmm.y;
         uint256 y2 = worseAmm.y;
 
-        return howMuchToSpendToLevelAmms(y1, y2, x1, x2);
+        return _howMuchToSpendToLevelAmms(y1, y2, x1, x2);
     }
 
 
