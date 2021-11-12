@@ -36,7 +36,7 @@ library Route {
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
     function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
-        // assert(amms.length >= 1);
+        require(amms.length >= 1, 'We cannot route to no AMMs! Please provide at least one AMM, as currently your array of amms is empty.');
 
         xSellYGain = new Structs.XSellYGain[](amms.length);
 
