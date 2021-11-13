@@ -21,6 +21,9 @@ contract DexProvider {
  	        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
  	}
 
+	//swaps tokenIn -> tokenOut
+	//assumes the sender already approved to spend thier tokenIn on behalf
+	//at the end of the execution, this address will be holding the tokenOut
     	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public { 
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
 		require(pairAddress != address(0), "This pool does not exist");
@@ -32,7 +35,6 @@ contract DexProvider {
         	IERC20(tokenIn).transfer(pairAddress, amountIn);
         	(uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
     		IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));
-        	require(IERC20(tokenOut).transfer(msg.sender, amountOut), "user need to recieve");
         	emit Swap(amountIn, amountOut);
 	}
 	
