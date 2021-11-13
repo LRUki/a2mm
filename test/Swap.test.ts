@@ -10,29 +10,12 @@ import { ContractFactory } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
 describe("==================================== Swap ====================================", function () {
   before(async function () {
-    //     const dexProviderAddress = await deployContract("DexProvider");
-    this.DexProvider = await ethers.getContractFactory("DexProvider");
-    this.Swap = (await ethers.getContractFactory("Swap")) as ContractFactory;
+    this.Swap = await ethers.getContractFactory("Swap");
   });
 
   beforeEach(async function () {
-    this.dexProvider = await this.DexProvider.deploy();
-    this.swap = await this.Swap.deploy(this.dexProvider.address);
+    this.swap = await this.Swap.deploy();
     await this.swap.deployed();
-  });
-
-  it("contract recieves funds", async function () {
-    const [signer] = await ethers.getSigners();
-    const signerAddress = await signer.getAddress();
-    await signer.sendTransaction({
-      from: signerAddress,
-      to: this.swap.address,
-      value: ethers.utils.parseEther("1"),
-    });
-    const contractBalance = await signer.provider?.getBalance(
-      this.swap.address
-    );
-    expect(contractBalance).to.equal(ethers.utils.parseEther("1"));
   });
 
   it("ERC is converted", async function () {
@@ -51,10 +34,13 @@ describe("==================================== Swap ============================
         tokenToAddress[Token.WETH],
         tokenToAddress[Token.DAI]
       );
+
+    let b = await getBalanceOfERC20(signer, tokenToAddress[Token.DAI]);
+    console.log(b.toString(), "BEFORE DAI");
     const tx = await this.swap.swap(
       tokenToAddress[Token.WETH],
       tokenToAddress[Token.DAI],
-      ethers.utils.parseEther("10").toString()
+      ethers.utils.parseEther(ETH_AMOUNT).toString()
     );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
@@ -69,21 +55,31 @@ describe("==================================== Swap ============================
         tokenToAddress[Token.WETH],
         tokenToAddress[Token.DAI]
       );
-    if (reserve1After.lt(reserve1Before)) {
-      //we recieved reserve1
-      expect(reserve1Before.sub(reserve1After).eq(amountOut)).to.be.true;
-      expect(reserve0After.sub(reserve0Before).eq(amountIn)).to.be.true;
-    } else {
-      //we recieved reserve0
-      expect(reserve0Before.sub(reserve0After).eq(amountOut)).to.be.true;
-      expect(reserve1After.sub(reserve1Before).eq(amountIn)).to.be.true;
-    }
+
+    //check reserve changed accordingly
+    expect(reserve1Before.sub(reserve1After).eq(amountOut)).to.be.true;
+    expect(reserve0After.sub(reserve0Before).eq(amountIn)).to.be.true;
 
     //check if signer recieved the token
     const amountRecieved = await getBalanceOfERC20(
       signer,
       tokenToAddress[Token.DAI]
     );
+    console.log(amountRecieved.toString(), amountOut.toString());
     expect(amountRecieved.eq(amountOut)).to.be.true;
+  });
+
+  it("contract recieves funds", async function () {
+    const [signer] = await ethers.getSigners();
+    const signerAddress = await signer.getAddress();
+    await signer.sendTransaction({
+      from: signerAddress,
+      to: this.swap.address,
+      value: ethers.utils.parseEther("1"),
+    });
+    const contractBalance = await signer.provider?.getBalance(
+      this.swap.address
+    );
+    expect(contractBalance).to.equal(ethers.utils.parseEther("1"));
   });
 });

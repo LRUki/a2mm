@@ -3,38 +3,37 @@
 pragma solidity 0.6.6 || 0.8.3;
 
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-// import "./interfaces/IReserveFeed.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+
 contract DexProvider {
-	address private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-	address private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+        event Swap(uint256 amountIn, uint256 amountOut);
 
-	function getUniV2Reserves(address tokenIn, address tokenOut) external view returns (uint, uint)
- 	{
-        	return getReserves(_uniV2FactoryAddress, tokenIn, tokenOut);
-    	}
+	
+	function getReserves(address factoryAddress, address tokenA, address tokenB) external view returns (uint reserveA, uint reserveB) {
+		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenA, tokenB);
+		require(pairAddress != address(0), "This pool does not exist");
+ 		(address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
+ 	        (uint reserve0, uint reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
+ 	        (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+ 	}
 
-	function getSushiReserves(address tokenIn, address tokenOut) external view returns (uint, uint)
- 	{
-		 return getReserves(_sushiFactoryAddress, tokenIn, tokenOut);
-    	}
-
-	function getReserves(address factoryAddress, address tokenIn, address tokenOut) public view returns (uint resIn,uint resOut) {
+    	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public { 
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
 		require(pairAddress != address(0), "This pool does not exist");
-		IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-  		(resIn, resOut,) = pair.getReserves();
+       		(address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        	require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom failed, make sure user approved");
+	        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
+        	(uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
+        	uint256 amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut); 
+        	IERC20(tokenIn).transfer(pairAddress, amountIn);
+        	(uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
+    		IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));
+        	require(IERC20(tokenOut).transfer(msg.sender, amountOut), "user need to recieve");
+        	emit Swap(amountIn, amountOut);
 	}
-
-	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountOfX) public {
-		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
-		require(pairAddress != address(0), "This pool does not exist");
-    		IUniswapV2Pair(pairAddress).swap(
-     		 amountOfX, 
-     		 0, 
-     		 address(this), 
-     		 bytes("not empty")
-    		);
-	}
+	
 }

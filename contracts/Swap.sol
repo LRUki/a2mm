@@ -14,54 +14,20 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
-contract Swap {
+contract Swap is DexProvider {
     address private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    IWETH9 private _WETH;
-
-    DexProvider private _dexProvider;
-        
-    constructor(address dexProviderAddress) public {
-	    _dexProvider = DexProvider(dexProviderAddress);
-        _WETH = IWETH9(_wethTokenAddress);
-    }
+    // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
 
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
-	    // _dexProvider.getSushiReserves();
-        address pairAddress = IUniswapV2Factory(_uniV2FactoryAddress).getPair(tokenIn, tokenOut);
-		require(pairAddress != address(0), "This pool does not exist");
-        executeSwap(pairAddress, tokenIn, tokenOut, amountIn);
+	    executeSwap(_sushiFactoryAddress, tokenIn, tokenOut, amountIn);
+
     }
 
 
-
-    function executeSwap(address pairAddress, address tokenIn, address tokenOut, uint256 amountIn) public {
-        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom failed, make sure user approved");
-        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
-        (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
-        uint256 amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut); 
-        IERC20(tokenIn).transfer(pairAddress,amountIn);
-        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
-    	IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));
-	}
-
-    //assumes pairAddress exsits and token0, token1 is sorted
-    function getReserves(address factoryAddress, address token0, address token1) public view returns (uint resIn, uint resOut) {
-  		(resIn, resOut,) = IUniswapV2Pair(IUniswapV2Factory(_uniV2FactoryAddress).getPair(token0, token1)).getReserves();
-	}
-
-        // console.log(IERC20(tokenIn).balanceOf(address(this)),"BEFORE");
-        // console.log(IERC20(tokenIn).balanceOf(address(this)),"AFTER");
-        // IERC20(tokenIn).approve(address(this),amountIn)
-        // IUniswapV2Router02 router = IUniswapV2Router02(_uniV2Router);
-        // require(TOKEN.transferFrom(msg.sender, address(this), amountOfX), "transferFrom failed.");
-        // require(TOKEN.approve(address(this), amountOfX), 'approve failed.');
-		
-    
     event Received(address, uint);
     receive() external payable {
         emit Received(msg.sender, msg.value);
@@ -95,4 +61,15 @@ contract Swap {
 //         }
 //         flashLoanRequiredAmount = 0;
 //     }
+
+
+    // function quantityOfYForX(uint256 xx,uint256 yy, uint256 x) public pure returns (uint256){
+        // float and int multiplication is not supported, so we have to rewrite:
+        // fixed commissionFee = 0.003;
+        // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
+        // as:
+    //     uint256 q = yy / (1000*xx + 997*x);
+    //     uint256 r = yy - q*(1000*xx + 997*x); //r = y % (1000*amm.x + 997*x)
+    //     return 1000*x*q + 1000*x*r/(1000*xx + 997*x);
+    // }
 }
