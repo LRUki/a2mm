@@ -1,11 +1,36 @@
 import { ethers } from "hardhat";
-import { expect } from "chai";
+import { assert } from "chai";
 import { Token, tokenToAddress, tokenToDecimal } from "./Token";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-export const convertEthToWETH = async (
+export const topUpWETHAndApproveContractToUse = async (
   signer: SignerWithAddress,
-  contractAddressToApprove: string,
+  ethAmount: string,
+  contractAddressToApprove: string
+) => {
+  //buy WETH using native ETH
+  await convertEthToWETH(signer, ethAmount);
+  //allow the swap contract to spend the WETH
+  await approveOurContractToUseWETH(
+    signer,
+    contractAddressToApprove,
+    ethAmount
+  );
+
+  const amountOfWETHSignerRecieved = await getBalanceOfERC20(
+    signer,
+    tokenToAddress[Token.WETH]
+  );
+  assert(
+    amountOfWETHSignerRecieved.toString() ==
+      ethers.utils.parseEther(ethAmount).toString(),
+    "signer didn't recieve WETH!"
+  );
+};
+
+//swap signer's ETH to WETH
+const convertEthToWETH = async (
+  signer: SignerWithAddress,
   amountOfEth: string
 ): Promise<void> => {
   const abi = [
@@ -18,13 +43,10 @@ export const convertEthToWETH = async (
     signer
   );
   await tokenContract.deposit({ value: ethers.utils.parseEther(amountOfEth) });
-  await tokenContract.approve(
-    contractAddressToApprove,
-    ethers.utils.parseEther(amountOfEth)
-  );
 };
 
-export const approveOurContractToUseWETH = async (
+//approve the contract to use signer's WETH
+const approveOurContractToUseWETH = async (
   signer: SignerWithAddress,
   contractAddressToApprove: string,
   amountOfEth: string
