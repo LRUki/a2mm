@@ -24,16 +24,16 @@ describe("==================================== UniV3PriceFeed ==================
       Token.USDT,
       ethAmount
     );
-    const response = await tx.wait();
-    expect(response.events).to.have.lengthOf(1);
-    expect(response.events[0].event).to.equal("GetPrice");
-    const { tokenIn, tokenOut, amountIn, amountOut } = response.events[0].args;
+    const txStatus = await tx.wait();
+    expect(txStatus.events).to.have.lengthOf(1);
+    expect(txStatus.events[0].event).to.equal("GetPrice");
+    const { tokenIn, tokenOut, amountIn, amountOut } = txStatus.events[0].args;
     expect(tokenIn).to.equal("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
     expect(tokenOut).to.equal("0xdAC17F958D2ee523a2206206994597C13D831ec7");
     expect(amountIn.toString()).equal(ethAmount);
     expect(amountOut.toString()).equal("4069872621");
     console.log(
-      `1ETH converted to ${amountOut.toString()} e${-tokenToDecimal[
+      `1ETH can be converted to ${amountOut.toString()} e${-tokenToDecimal[
         Token.USDT
       ]}`
     );

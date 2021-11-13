@@ -3,15 +3,16 @@ import { expect, assert } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 import {
-  convertEthToWETH,
   getBalanceOfERC20,
-  approveOurContractToUseWETH,
+  topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
+import { ContractFactory } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
 describe("==================================== Swap ====================================", function () {
   before(async function () {
     //     const dexProviderAddress = await deployContract("DexProvider");
     this.DexProvider = await ethers.getContractFactory("DexProvider");
-    this.Swap = await ethers.getContractFactory("Swap");
+    this.Swap = (await ethers.getContractFactory("Swap")) as ContractFactory;
   });
 
   beforeEach(async function () {
@@ -23,13 +24,11 @@ describe("==================================== Swap ============================
   it("contract recieves funds", async function () {
     const [signer] = await ethers.getSigners();
     const signerAddress = await signer.getAddress();
-
-    const tx = {
+    await signer.sendTransaction({
       from: signerAddress,
       to: this.swap.address,
       value: ethers.utils.parseEther("1"),
-    };
-    await signer.sendTransaction(tx);
+    });
     const contractBalance = await signer.provider?.getBalance(
       this.swap.address
     );
@@ -38,59 +37,53 @@ describe("==================================== Swap ============================
 
   it("ERC is converted", async function () {
     const ETH_AMOUNT = "10";
-
     const [signer] = await ethers.getSigners();
-    //buy WETH using native ETH
-    await convertEthToWETH(signer, this.swap.address, ETH_AMOUNT);
-    //allow the swap contract to spend the WETH
-    await approveOurContractToUseWETH(signer, this.swap.address, "10");
 
-    const amountOfWETH = await getBalanceOfERC20(
+    //here we need to first convert native ETH to ERC20 WETH
+    await topUpWETHAndApproveContractToUse(
       signer,
-      tokenToAddress[Token.WETH]
+      ETH_AMOUNT,
+      this.swap.address
     );
-    assert(
-      amountOfWETH.toString() == ethers.utils.parseEther(ETH_AMOUNT).toString(),
-      "signer didn't recieve WETH!"
-    );
-    let res = await this.swap.getReserves(
-      factoryToAddress[Factory.UNIV2],
-      tokenToAddress[Token.WETH],
-      tokenToAddress[Token.DAI]
-    );
-    console.log(res.toString());
-    await this.swap.swap(
+    const [reserve0Before, reserve1Before]: BigNumber[] =
+      await this.swap.getReserves(
+        factoryToAddress[Factory.SUSHI],
+        tokenToAddress[Token.WETH],
+        tokenToAddress[Token.DAI]
+      );
+    const tx = await this.swap.swap(
       tokenToAddress[Token.WETH],
       tokenToAddress[Token.DAI],
       ethers.utils.parseEther("10").toString()
     );
-    res = await this.swap.getReserves(
-      factoryToAddress[Factory.UNIV2],
-      tokenToAddress[Token.WETH],
+    const txStatus = await tx.wait();
+    const swapEvent = txStatus.events.filter(
+      (e: { event: string; args: string[] }) => e.event == "Swap"
+    );
+    expect(swapEvent).to.have.lengthOf(1);
+    const { amountIn, amountOut } = swapEvent[0].args;
+
+    const [reserve0After, reserve1After]: BigNumber[] =
+      await this.swap.getReserves(
+        factoryToAddress[Factory.SUSHI],
+        tokenToAddress[Token.WETH],
+        tokenToAddress[Token.DAI]
+      );
+    if (reserve1After.lt(reserve1Before)) {
+      //we recieved reserve1
+      expect(reserve1Before.sub(reserve1After).eq(amountOut)).to.be.true;
+      expect(reserve0After.sub(reserve0Before).eq(amountIn)).to.be.true;
+    } else {
+      //we recieved reserve0
+      expect(reserve0Before.sub(reserve0After).eq(amountOut)).to.be.true;
+      expect(reserve1After.sub(reserve1Before).eq(amountIn)).to.be.true;
+    }
+
+    //check if signer recieved the token
+    const amountRecieved = await getBalanceOfERC20(
+      signer,
       tokenToAddress[Token.DAI]
     );
-    console.log(res.toString());
+    expect(amountRecieved.eq(amountOut)).to.be.true;
   });
-
-  // it("Swaps at uni", async function () {
-  //     let [resIn, resOut] = await this.dexProvider.getUniV2Reserves(
-  //       tokenToAddress[Token.WETH],
-  //       tokenToAddress[Token.USDT]
-  //     );
-  //     console.log("BEFORE SWAP", resIn.toString(), resOut.toString());
-  // let balance = this.swap.getBalance(tokenToAddress[Token.WETH]);
-  // console.log(balance.toString(), "BEFORE");
-  // await this.swap.swap(
-  //   tokenToAddress[Token.WETH],
-  //   tokenToAddress[Token.USDT],
-  //   390 * tokenToDecimal[Token.WETH]
-  // );
-  // balance = this.swap.getBalance(tokenToAddress[Token.WETH]);
-  // console.log(balance.toString(), "AGTER");
-  //     [resIn, resOut] = await this.dexProvider.getUniV2Reserves(
-  //       tokenToAddress[Token.WETH],
-  //       tokenToAddress[Token.USDT]
-  //     );
-  //     console.log("AFTER SWAP", resIn.toString(), resOut.toString());
-  // });
 });
