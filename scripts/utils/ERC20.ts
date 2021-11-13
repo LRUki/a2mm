@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { assert } from "chai";
 import { Token, tokenToAddress, tokenToDecimal } from "./Token";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { Signer } from "@ethersproject/abstract-signer";
 
 export const topUpWETHAndApproveContractToUse = async (
   signer: SignerWithAddress,
@@ -65,9 +66,12 @@ const approveOurContractToUseWETH = async (
   );
 };
 
+//returns the balance of ERC20 token that address holds
+//if address is not provided, returns the balance of the signer
 export const getBalanceOfERC20 = async (
   signer: SignerWithAddress,
-  erc20TokenAddress: string
+  erc20TokenAddress: string,
+  address?: string
 ) => {
   const abi = [
     "function balanceOf(address owner) external view returns (uint)",
@@ -77,5 +81,5 @@ export const getBalanceOfERC20 = async (
     abi,
     signer.provider
   );
-  return tokenContract.balanceOf(signer.address);
+  return tokenContract.balanceOf(address || signer.address);
 };
