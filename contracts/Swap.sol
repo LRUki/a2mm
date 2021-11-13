@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// solhint-disable-next-line
 pragma solidity 0.6.6 || 0.8.3;
 pragma experimental ABIEncoderV2;
 
@@ -17,22 +18,33 @@ import "hardhat/console.sol";
 contract Swap is DexProvider {
     address private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
-
+    event Swap(uint256 amountIn, uint256 amountOut);
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
-	    executeSwap(_sushiFactoryAddress, tokenIn, tokenOut, amountIn);
+        Structs.AmountsToSendToAmm[] memory route = _mockAmountsToSendToAmms(amountIn);
+        require(route[0].x + route[1].x == amountIn, "wrong route");
+        uint256 amountOut;
+        for (uint256 i = 0; i < route.length; ++i) {
+	        amountOut += executeSwap(route[i].factoryAddress, tokenIn, tokenOut, route[i].x);
+        }
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
+        emit Swap(amountIn, amountOut);
+    }
 
+    //returns mock routing for univ2 and sushi
+    function _mockAmountsToSendToAmms(uint256 amountIn) private view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms) {
+        uint256 amoutToSendToUniV2 = amountIn / 2;
+        uint256 amoutToSendToSushi = amountIn - amoutToSendToUniV2;
+        amountsToSendToAmms = new Structs.AmountsToSendToAmm[](2);
+        amountsToSendToAmms[0] = Structs.AmountsToSendToAmm(amoutToSendToUniV2, 0, _uniV2FactoryAddress);
+        amountsToSendToAmms[1] = Structs.AmountsToSendToAmm(amoutToSendToSushi, 0, _sushiFactoryAddress);
     }
 
 
-    event Received(address, uint);
-    receive() external payable {
-        emit Received(msg.sender, msg.value);
-        // _WETH.deposit{value:msg.value}();
-    }
+
     
     // @notice - for now, only the first two AMMs in the list will actually be considered for anything
     // @param amountOfX - how much the user is willing to trade
@@ -62,14 +74,9 @@ contract Swap is DexProvider {
 //         flashLoanRequiredAmount = 0;
 //     }
 
-
-    // function quantityOfYForX(uint256 xx,uint256 yy, uint256 x) public pure returns (uint256){
-        // float and int multiplication is not supported, so we have to rewrite:
-        // fixed commissionFee = 0.003;
-        // return amm.y - (amm.x * amm.y)/(amm.x + x * (1 - commissionFee));
-        // as:
-    //     uint256 q = yy / (1000*xx + 997*x);
-    //     uint256 r = yy - q*(1000*xx + 997*x); //r = y % (1000*amm.x + 997*x)
-    //     return 1000*x*q + 1000*x*r/(1000*xx + 997*x);
-    // }
+    //allow contract to recieve eth
+    //not sure if we need it but might as well
+    receive() external payable {
+        // _WETH.deposit{value:msg.value}();
+    }
 }

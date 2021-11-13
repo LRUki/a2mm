@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// solhint-disable-next-line
+//solhint-disable-next-line
 pragma solidity 0.6.6 || 0.8.3;
 
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
@@ -10,10 +10,10 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 
 contract DexProvider {
-        event Swap(uint256 amountIn, uint256 amountOut);
+        event ExecuteSwap(uint256 amountIn, uint256 amountOut);
 
 	
-	function getReserves(address factoryAddress, address tokenA, address tokenB) external view returns (uint reserveA, uint reserveB) {
+	function getReserves(address factoryAddress, address tokenA, address tokenB) public view returns (uint256 reserveA, uint256 reserveB) {
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenA, tokenB);
 		require(pairAddress != address(0), "This pool does not exist");
  		(address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
@@ -24,7 +24,7 @@ contract DexProvider {
 	//swaps tokenIn -> tokenOut
 	//assumes the sender already approved to spend thier tokenIn on behalf
 	//at the end of the execution, this address will be holding the tokenOut
-    	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public { 
+    	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public returns (uint256 amountOut){ 
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
 		require(pairAddress != address(0), "This pool does not exist");
        		(address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
@@ -35,7 +35,8 @@ contract DexProvider {
         	IERC20(tokenIn).transfer(pairAddress, amountIn);
         	(uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
     		IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));
-        	emit Swap(amountIn, amountOut);
+        	emit ExecuteSwap(amountIn, amountOut);
+		return amountOut;
 	}
 	
 }

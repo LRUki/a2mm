@@ -58,11 +58,11 @@ describe("==================================== DexProvider =====================
       ethers.utils.parseEther(ethAmout).toString()
     );
     const txStatus = await tx.wait();
-    const swapEvent = txStatus.events.filter(
-      (e: { event: string; args: string[] }) => e.event == "Swap"
+    const executeSwapEvent = txStatus.events.filter(
+      (e: { event: string; args: string[] }) => e.event == "ExecuteSwap"
     );
-    expect(swapEvent).to.have.lengthOf(1);
-    const { amountIn, amountOut } = swapEvent[0].args;
+    expect(executeSwapEvent).to.have.lengthOf(1);
+    const { amountIn, amountOut } = executeSwapEvent[0].args;
 
     const [reserve0After, reserve1After]: BigNumber[] =
       await this.dexProvider.getReserves(
@@ -75,11 +75,10 @@ describe("==================================== DexProvider =====================
     expect(reserve1Before.sub(reserve1After).eq(amountOut)).to.be.true;
     expect(reserve0After.sub(reserve0Before).eq(amountIn)).to.be.true;
 
-    //check if signer recieved the token
+    //check if the contract recieved the token
     const amountRecieved = await getBalanceOfERC20(
-      signer,
-      tokenOut,
-      this.dexProvider.address
+      this.dexProvider.address,
+      tokenOut
     );
     expect(amountRecieved.eq(amountOut)).to.be.true;
   });

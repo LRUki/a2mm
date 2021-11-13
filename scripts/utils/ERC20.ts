@@ -19,7 +19,7 @@ export const topUpWETHAndApproveContractToUse = async (
   );
 
   const amountOfWETHSignerRecieved = await getBalanceOfERC20(
-    signer,
+    signer.address,
     tokenToAddress[Token.WETH]
   );
   assert(
@@ -67,12 +67,11 @@ const approveOurContractToUseWETH = async (
 };
 
 //returns the balance of ERC20 token that address holds
-//if address is not provided, returns the balance of the signer
 export const getBalanceOfERC20 = async (
-  signer: SignerWithAddress,
-  erc20TokenAddress: string,
-  address?: string
+  address: string,
+  erc20TokenAddress: string
 ) => {
+  const [signer] = await ethers.getSigners();
   const abi = [
     "function balanceOf(address owner) external view returns (uint)",
   ];
@@ -81,5 +80,5 @@ export const getBalanceOfERC20 = async (
     abi,
     signer.provider
   );
-  return tokenContract.balanceOf(address || signer.address);
+  return tokenContract.balanceOf(address);
 };
