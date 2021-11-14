@@ -5,11 +5,22 @@ pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
+import "hardhat/console.sol";
 
 
 library Arbitrage {
 
-    // @notice -
+    //function below is only for testing purposes
+    //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
+    function arbitrageWrapper(uint256[2][] memory ammsArray, uint256 amountOfYHeld) public view returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint256 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return arbitrage(amms, amountOfYHeld);
+    }
+
+
     // @param amms - The AMMs across which we are considering to arbitrage
     // @param amountOfYHeld - maximum amount of Y we are considering to use on arbitrage; if more is required, \
     // then a flash loan will be required, as big as 'flashLoanRequiredAmount'.
@@ -17,7 +28,7 @@ library Arbitrage {
     // @return amountsToSendToAmms - the calculated amounts of (x, y) pairs to send to the AMMs for arbitrage. \
     // Ordered in the same order as the argument.
     // @return flashLoanRequiredAmount - how large of a flash loan is required to complete the arbitrage
-    function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
 
         ArbHelper memory arbHelper = ArbHelper(
@@ -59,29 +70,56 @@ library Arbitrage {
             //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
             //Create arrays which hole the left AMMs and right AMMs. These are the ones which have been leveled within
             // their respective array.
-            Structs.Amm[] memory sortedAmmsUpTol = new Structs.Amm[](amms.length - arbHelper.right);
+            console.log('amms.length: %s', amms.length);
+            console.log('arbHelper.left: %s', arbHelper.left);
+            Structs.Amm[] memory sortedAmmsUpTol = new Structs.Amm[](arbHelper.left + 1);
             for (uint256 k = 0; k <= arbHelper.left; ++k) {
-                sortedAmmsUpTol[k - arbHelper.right] = arbHelper.sortedAmms[k];
+                console.log('k: %s', k);
+                sortedAmmsUpTol[k] = arbHelper.sortedAmms[k];
             }
+            console.log('-----------------------------');
             Structs.Amm[] memory sortedAmmsrToEnd = new Structs.Amm[](amms.length - arbHelper.right);
+            console.log('arbHelper.right: %s', arbHelper.right);
             for (uint256 k = arbHelper.right; k < amms.length; ++k) {
+                console.log('k: %s', k);
                 sortedAmmsrToEnd[k - arbHelper.right] = arbHelper.sortedAmms[k];
             }
+            console.log('passed both for loops');
+            console.log('===============================\n');
 
             if (arbHelper.right - arbHelper.left == 1) {
+                console.log('-----------------------------');
+                console.log('not broken1');
+                console.log('-----------------------------');
                 //If the union of the left and right arrays is all of the AMMs, then the last step is to just
                 // arbitrage on their aggregates.
                 uint256 dyOpt = _optimalAmountToSpendOnArbitrageForY(arbHelper.ml, arbHelper.mr);
+//                if (dyOpt == 0) {
+//                    break;
+//                }
+                console.log('after _optimalAmountToSpendOnArbitrageForY()');
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, dyOpt);
+                console.log('-----------------------------');
+                console.log('not broken4');
+                console.log('-----------------------------');
             } else if (arbHelper.dyBar < arbHelper.dy) {
+                console.log('-----------------------------');
+                console.log('not broken2');
+                console.log('-----------------------------');
                 //Need to level the left AMMs, as the cost of leveling the right ones would be higher
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, arbHelper.dyBar);
                 arbHelper.increaseLow = true;
             } else {
+                console.log('-----------------------------');
+                console.log('not broken3');
+                console.log('-----------------------------');
                 //Need to level the right AMMs, as the cost of leveling the left ones would be higher
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, arbHelper.dy);
                 arbHelper.increaseLow = false;
             }
+            console.log('-----------------------------');
+            console.log('not broken5');
+            console.log('-----------------------------');
 
             //Route the difference in y needed to level the AMMs (to get some X) on the left AMMs (ml)
             uint256 xGainSum = 0;
@@ -114,7 +152,6 @@ library Arbitrage {
                 arbHelper.ml.x += amms[arbHelper.sortedAmmIndices[++arbHelper.left]].x;
                 arbHelper.ml.y += amms[arbHelper.sortedAmmIndices[arbHelper.left]].y;
             } else {
-                assert(arbHelper.right > 0);
                 arbHelper.mr.x += amms[arbHelper.sortedAmmIndices[--arbHelper.right]].x;
                 arbHelper.mr.y += amms[arbHelper.sortedAmmIndices[arbHelper.right]].y;
             }
@@ -144,9 +181,17 @@ library Arbitrage {
     // @param t12 - The amount of liquidity of token 't1' on the second AMM
     // @param t22 - The amount of liquidity of token 't2' on the second AMM
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrage(uint256 t11, uint256 t21, uint256 t12, uint256 t22) private pure returns (uint256) {
-        assert(t21 * t12 > t22 * t11);
-        return 1003 * (997 * SharedFunctions.sqrt(t11 * t12 * t21 * t22) / 1000 - t11 * t22) / (997 * t21 + 1000 * t22);
+    function _optimalAmountToSpendOnArbitrage(uint256 t11, uint256 t21, uint256 t12, uint256 t22) private view returns (uint256) {
+        console.log('Hello3');
+        assert(t21 * t12 >= t22 * t11);
+        console.log('Hello4');
+        uint256 left = 997 * SharedFunctions.sqrt(t11 * t12) * SharedFunctions.sqrt(t21 * t22) / 1000;
+        uint256 right = t11 * t22;
+        if (right >= left) {
+            //We can't level these any more than they are
+            return 0;
+        }
+        return 1003 * (left - right) / (997 * t21 + 1000 * t22);
     }
 
 
@@ -158,8 +203,8 @@ library Arbitrage {
     // @param amm1 - The AMM whose price for Y is lower, i.e. Y/X is higher; we would sell X here
     // @param amm2 - The AMM whose price for Y is higher, i.e. Y/X is lower; we would sell Y here
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrageForX(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (uint256) {
-        require(amm1.y * amm2.x > amm2.y * amm1.x, "Y must be cheaper on amm1!");
+    function _optimalAmountToSpendOnArbitrageForX(Structs.Amm memory amm1, Structs.Amm memory amm2) private view returns (uint256) {
+        require(amm1.y * amm2.x >= amm2.y * amm1.x, "Y must be cheaper on amm1!");
         return _optimalAmountToSpendOnArbitrage(amm1.x, amm1.y, amm2.x, amm2.y);
     }
 
@@ -172,8 +217,10 @@ library Arbitrage {
     // @param amm1 - The AMM whose price for X is lower, i.e. X/Y is higher; we would sell Y here
     // @param amm2 - The AMM whose price for X is higher, i.e. X/Y is lower; we would sell X here
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrageForY(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (uint256) {
-        require(amm1.x * amm2.y > amm2.x * amm1.y, "X must be cheaper on amm1!");
+    function _optimalAmountToSpendOnArbitrageForY(Structs.Amm memory amm1, Structs.Amm memory amm2) private view returns (uint256) {
+        console.log('Hello1');
+        require(amm1.x * amm2.y >= amm2.x * amm1.y, "X must be cheaper on amm1!");
+        console.log('Hello2');
         return _optimalAmountToSpendOnArbitrage(amm1.y, amm1.x, amm2.y, amm2.x);
     }
 

@@ -38,7 +38,7 @@ contract Swap is DexProvider {
 
 
     //returns mock routing for univ2 and sushi
-    function _mockAmountsToSendToAmms(uint256 amountIn) private view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms) {
+    function _mockAmountsToSendToAmms(uint256 amountIn) private pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms) {
         uint256 amountToSendToUniV2 = amountIn / 2;
         uint256 amountToSendToSushi = amountIn - amountToSendToUniV2;
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](2);
@@ -51,7 +51,7 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;

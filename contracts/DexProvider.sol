@@ -31,7 +31,7 @@ contract DexProvider {
         	require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom failed, make sure user approved");
 	        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
         	(uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
-        	uint256 amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut); 
+        	amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut);
         	IERC20(tokenIn).transfer(pairAddress, amountIn);
         	(uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (uint256(0), amountOut) : (amountOut, uint256(0));
     		IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(0));

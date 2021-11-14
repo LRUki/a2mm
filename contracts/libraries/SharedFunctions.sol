@@ -4,6 +4,7 @@ pragma solidity 0.6.6 || 0.8.3;
 pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
+import "hardhat/console.sol";
 
 
 library SharedFunctions {
@@ -46,8 +47,11 @@ library SharedFunctions {
     // @param dx - how much of X we are willing to potentially spend
     // @return amountOut - how much of Y we would get if we traded x of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
-        require(dx > 0, "Insufficient 'dx'");
+//        require(dx > 0, "Insufficient 'dx'");
         require(x > 0 && y > 0, "Insufficient liquidity: x or y");
+        if (dx == 0) {
+            return 0;
+        }
         uint amountInWithFee = dx * 997;
         uint numerator = amountInWithFee * y;
         uint denominator = x * 1000 + amountInWithFee;
@@ -72,9 +76,16 @@ library SharedFunctions {
     }
 
 
-    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256 delta) {
+    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256) {
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        delta = (1002 * (sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21) - t11 * t22)) / (1000 * t22);
+        require(t11 > 0 && t12 > 0 && t21 > 0 && t22 > 0, "Liquidity must be more than 0.");
+        uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
+        uint256 right = t11 * t22;
+        if (right >= left) {
+            //We can't level these any more than they are
+            return 0;
+        }
+        return (1002 * (left - right)) / (1000 * t22);
     }
 
 
@@ -83,7 +94,7 @@ library SharedFunctions {
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaX) {
+    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
@@ -107,7 +118,7 @@ library SharedFunctions {
     // @param betterAmm - the AMM which has a better price for X; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for X, i.e. X/Y is lower here than on betterAmm
     // @return deltaY - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaY) {
+    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
