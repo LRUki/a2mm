@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.3;
+//solhint-disable-next-line
+pragma solidity 0.6.6 || 0.8.3;
 
 
 library Structs {
@@ -8,7 +8,6 @@ library Structs {
     struct Amm {
         uint256 x;
         uint256 y;
-        // uint k = x*y;
     }
 
 

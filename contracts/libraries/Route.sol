@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.3;
+//solhint-disable-next-line
+pragma solidity 0.6.6 || 0.8.3;
+pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
-import "hardhat/console.sol";
 
 library Route {
 
