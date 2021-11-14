@@ -69,18 +69,15 @@ library SharedFunctions {
     }
 
 
-    // @param amm - the AMM we are considering to trade at
-    // @return - amount of Y we would get for unit X
-    function exchangeRateForY(Structs.Amm memory amm) public pure returns (uint256){
-        return quantityOfYForX(amm, 1);
-    }
-
-
-    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256) {
+    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private view returns (uint256) {
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
         require(t11 > 0 && t12 > 0 && t21 > 0 && t22 > 0, "Liquidity must be more than 0.");
         uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
         uint256 right = t11 * t22;
+        console.log('t11 : %s', t11);
+        console.log('t12 : %s', t12);
+        console.log('t21 : %s', t21);
+        console.log('t22 : %s', t22);
         if (right >= left) {
             //We can't level these any more than they are
             return 0;
@@ -94,7 +91,7 @@ library SharedFunctions {
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
+    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public view returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
@@ -104,7 +101,7 @@ library SharedFunctions {
     }
 
 
-    function howMuchXToSpendToLevelAmmsWrapper(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public pure returns (uint256) {
+    function howMuchXToSpendToLevelAmmsWrapper(uint256[2] memory betterAmmArray, uint256[2] memory worseAmmArray) public view returns (uint256) {
 
         Structs.Amm memory betterAmm = Structs.Amm(betterAmmArray[0], betterAmmArray[1]);
         Structs.Amm memory worseAmm = Structs.Amm(worseAmmArray[0], worseAmmArray[1]);
@@ -117,8 +114,8 @@ library SharedFunctions {
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for X; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for X, i.e. X/Y is lower here than on betterAmm
-    // @return deltaY - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
+    // @return - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
+    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public view returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
@@ -131,7 +128,7 @@ library SharedFunctions {
     // @notice - uses insertion sort, as we don't expect to have a large list (I think Arthur mentioned only using 4-5 maximum)
     // @param amms - all of the AMMs we are considering (either for routing or arbitrage)
     // @return indices - the indices of the amms array sorted by their exchange rate in ascending Y/X order
-    function sortAmmArrayIndicesByExchangeRate(Structs.Amm[] memory amms) public pure returns (uint256[] memory indices) {
+    function sortAmmArrayIndicesByExchangeRate(Structs.Amm[] memory amms) public view returns (uint256[] memory indices) {
         indices = new uint256[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
             indices[i] = i;
@@ -141,7 +138,7 @@ library SharedFunctions {
         for (uint256 i = 1; i < n; ++i) {
             uint256 tmp = indices[i];
             uint256 j = i;
-            while (j > 0 && exchangeRateForY(amms[tmp]) < exchangeRateForY(amms[indices[j - 1]])) {
+            while (j > 0 && amms[tmp].y * amms[indices[j - 1]].x < amms[indices[j - 1]].y * amms[tmp].x) {
                 indices[j] = indices[j - 1];
                 --j;
             }
