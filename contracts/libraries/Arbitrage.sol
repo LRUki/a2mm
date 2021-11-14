@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.3;
+//solhint-disable-next-line
+pragma solidity 0.6.6 || 0.8.3;
+pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
@@ -37,7 +38,6 @@ library Arbitrage {
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; ++i) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(0, 0);
-            //TODO: Here we are assuming that the AMMs are taken by reference and not by value. Make sure this is the case
             arbHelper.sortedAmms[i] = amms[arbHelper.sortedAmmIndices[i]];
         }
 
