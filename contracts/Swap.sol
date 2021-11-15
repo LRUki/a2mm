@@ -16,14 +16,13 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    address payable constant private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address payable constant private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    //TODO: remove after adding address to Structs
-    address payable[2] private _factoryAddresses = [_sushiFactoryAddress, _uniV2FactoryAddress];
+    address payable constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address payable constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    
+    event SwapEvent(uint256 amountIn, uint256 amountOut);
     // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
-    event SwapEvent(uint256 amountIn, uint256 amountOut);
 
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
@@ -31,7 +30,7 @@ contract Swap is DexProvider {
         require(route[0].x + route[1].x == amountIn, "wrong route");
         uint256 amountOut = 0;
         for (uint256 i = 0; i < route.length; ++i) {
-	        amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
+	        amountOut += executeSwap(i == 0 ? _SUSHI_FACTORY_ADDRESS : _UNIV2_FACTORY_ADDRESS, tokenIn, tokenOut, route[i].x);
         }
         require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
         emit SwapEvent(amountIn, amountOut);
@@ -78,6 +77,7 @@ contract Swap is DexProvider {
     //allow contract to recieve eth
     //not sure if we need it but might as well
     receive() external payable {
+        console.log(msg.sender);
         // _WETH.deposit{value:msg.value}();
     }
 }
