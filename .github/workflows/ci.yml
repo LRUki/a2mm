@@ -42,9 +42,4 @@ jobs:
   #     - name: Deploy
   #       run: |
   #         echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
-<<<<<<< HEAD
   #         npm run deploy --network=ropsten
-=======
-  #         npm run deploy --network=ropsten  
-  
->>>>>>> main
