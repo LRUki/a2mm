@@ -10,7 +10,7 @@ library Route {
 
     //functions below are only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
-    function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
+    function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory, uint256, bool) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -24,7 +24,7 @@ library Route {
     // @return xSellYGain - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
-    function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+    function route(Structs.Amm[] memory amms, uint256 amountOfX) public view returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
         require(amms.length >= 1, "Need at least 1 AMM in 'amms'");
 
         xSellYGain = new Structs.XSellYGain[](amms.length);
@@ -105,7 +105,7 @@ library Route {
     // @param amm1 - the first of two AMMs we are looking to route between
     // @param amm2 - the second of two AMMs we are looking to route between
     // @return - the amounts of X to send to AMM1 and AMM2 respectively
-    function _fractionToSplitRoutingOnEqualPrice(Structs.Amm memory amm1, Structs.Amm memory amm2, uint256 deltaX) private pure returns (uint256, uint256) {
+    function _fractionToSplitRoutingOnEqualPrice(Structs.Amm memory amm1, Structs.Amm memory amm2, uint256 deltaX) private view returns (uint256, uint256) {
         uint256 amm1Part = (deltaX * amm1.x) / (amm1.x + amm2.x);
         uint256 amm2Part = (deltaX * amm2.x) / (amm1.x + amm2.x);
         uint256 leftover = deltaX - amm1Part - amm2Part;

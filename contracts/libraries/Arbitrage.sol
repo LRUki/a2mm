@@ -9,6 +9,7 @@ import "hardhat/console.sol";
 
 
 library Arbitrage {
+    uint256 constant MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     //function below is only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
@@ -56,16 +57,25 @@ library Arbitrage {
         uint256[] memory ySplits;
 
         //Level until the union of ml and mr is sortedAmmIndices.
-        while (arbHelper.left < arbHelper.right) {
+        while (arbHelper.left < arbHelper.right && _isArbitrageProfitable(arbHelper.ml, arbHelper.mr)) {
             arbHelper.dyBar = SharedFunctions.howMuchYToSpendToLevelAmms(arbHelper.ml, amms[arbHelper.sortedAmmIndices[arbHelper.left + 1]]);
+            console.log('arbHelper.dyBar: %s', arbHelper.dyBar);
 
             //The amount we would need to spend, in terms of X, to level out the aggregated AMMs ml with the next
             // cheapest AMM;
             arbHelper.dxBar = SharedFunctions.howMuchXToSpendToLevelAmms(arbHelper.mr, amms[arbHelper.sortedAmmIndices[arbHelper.right - 1]]);
+            console.log('arbHelper.dxBar: %s', arbHelper.dxBar);
             //We then need to find out how much Y we need to spend to actually get the above mentioned amount of X. This
             // just involves inverting the second formula from (16) to make d_y the subject.
             // Note that if the commission fee is not 0.3% (or the formula is not xy=k), then this would differ:
-            arbHelper.dy = (1000 * arbHelper.ml.x * arbHelper.ml.y - 1000 * arbHelper.ml.y * arbHelper.dxBar) / (997 * arbHelper.dxBar);
+            uint256 left = 1000 * arbHelper.ml.x * arbHelper.ml.y;
+            uint256 right = 1000 * arbHelper.ml.y * arbHelper.dxBar;
+            if (right > left || arbHelper.dxBar == 0) {
+                arbHelper.dy = MAX_INT;
+            } else {
+                arbHelper.dy = (left - right) / (997 * arbHelper.dxBar);
+            }
+            console.log('arbHelper.dy: %s', arbHelper.dy);
 
             //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
             //Create arrays which hole the left AMMs and right AMMs. These are the ones which have been leveled within
@@ -94,10 +104,7 @@ library Arbitrage {
                 //If the union of the left and right arrays is all of the AMMs, then the last step is to just
                 // arbitrage on their aggregates.
                 uint256 dyOpt = _optimalAmountToSpendOnArbitrageForY(arbHelper.ml, arbHelper.mr);
-//                if (dyOpt == 0) {
-//                    break;
-//                }
-                console.log('after _optimalAmountToSpendOnArbitrageForY()');
+                console.log('after _optimalAmountToSpendOnArbitrageForY() = %s', dyOpt);
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, dyOpt);
                 console.log('-----------------------------');
                 console.log('not broken4');
@@ -155,6 +162,9 @@ library Arbitrage {
                 arbHelper.mr.x += amms[arbHelper.sortedAmmIndices[--arbHelper.right]].x;
                 arbHelper.mr.y += amms[arbHelper.sortedAmmIndices[arbHelper.right]].y;
             }
+            console.log('AMM1: (%s, %s)', amms[0].x, amms[0].y);
+            console.log('AMM2: (%s, %s)', amms[1].x, amms[1].y);
+            console.log('AMM3: (%s, %s)', amms[2].x, amms[2].y);
         }
     }
 
@@ -164,10 +174,10 @@ library Arbitrage {
     // This formula would be different if the commission fee is not 0.3% or the pricing formula is not the constant  \
     // product exchange formula; this formula is inexact. Making it exact might have a higher gas fee, so might be  \
     // worth investigating if the higher potential profit covers the potentially higher gas fee
-    // @param amm1 - The AMM which we are selling X on
-    // @param amm2 - The AMM which we are buying X on
+    // @param amm1 - The AMM which we are selling Y on
+    // @param amm2 - The AMM which we are buying Y on
     function _isArbitrageProfitable(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (bool) {
-        return 500 * amm2.y * amm1.x < 497 * amm1.y * amm2.x;
+        return 500 * amm2.x * amm1.y < 497 * amm1.x * amm2.y;
     }
 
 
