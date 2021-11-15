@@ -20,21 +20,23 @@ describe("==================================== SharedFunctions =================
     expect(res.toString()).to.equal(Math.floor(Math.sqrt(num)).toString());
   });
 
-  // it("quantityOfYForX gives correct output", async function () {
-  //   const res = await this.sharedFunctions.quantityOfYForX(
-  //     toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
-  //     `${200}`
-  //   );
-  //   console.log(res.toString(), "x to approach in Solidity");
-  //   const exp = quantityOfYForX(
-  //     [100 * TEN_TO_18, 200 * TEN_TO_18],
-  //     200
-  //   );
-  //   console.log(
-  //     exp,
-  //     "x to approach in TSX"
-  //   );
-  // });
+  it("quantityOfYForX gives correct output", async function () {
+    const res = await this.sharedFunctions._quantityOfYForX(
+      `${100 * TEN_TO_18}`,
+      `${200 * TEN_TO_18}`,
+      `${200}`
+    );
+    console.log(res.toString(), "x to approach in Solidity");
+    const exp = quantityOfYForX(
+      100 * TEN_TO_18, 
+      200 * TEN_TO_18,
+      200
+    );
+    console.log(
+      exp,
+      "x to approach in TSX"
+    );
+  });
 
   it("sortAmmArrayIndicesByExchangeRate gives correct output", async function () {
     let testExamples =
@@ -95,12 +97,15 @@ describe("==================================== SharedFunctions =================
 // helper functions for testing
 const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
 
-// const quantityOfYForX = (
-//   amm: number[],
-//   z: number
-// ): number => {
-//   const [x, y] = amm;
-//   let q = y / (1000 * x + 997 * z);
-//   let r = y - q * (1000 * x + 997 * z); //r = y % (1000*amm.x + 997*x)
-//   return 1000 * z * q + 1000 * z * r / (1000 * x + 997 * z);
-// };
+const quantityOfYForX = (
+  x: number,
+  y: number,
+  dx: number
+): number => {
+  expect(x > 0 && y > 0)
+  if (dx == 0 )
+    return 0
+  let q = y / (1000 * x + 997 * dx);
+  let r = y - q * (1000 * x + 997 * dx); //r = y % (1000*amm.x + 997*x)
+  return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
+};
