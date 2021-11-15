@@ -43,6 +43,7 @@ library Arbitrage {
         , 0
         , 0
         , false
+        , false
         );
         arbHelper.ml = Structs.Amm(amms[arbHelper.sortedAmmIndices[arbHelper.left]].x, amms[arbHelper.sortedAmmIndices[arbHelper.left]].y);
         arbHelper.mr = Structs.Amm(amms[arbHelper.sortedAmmIndices[arbHelper.right]].x, amms[arbHelper.sortedAmmIndices[arbHelper.right]].y);
@@ -68,14 +69,16 @@ library Arbitrage {
             //We then need to find out how much Y we need to spend to actually get the above mentioned amount of X. This
             // just involves inverting the second formula from (16) to make d_y the subject.
             // Note that if the commission fee is not 0.3% (or the formula is not xy=k), then this would differ:
-            uint256 left = 1000 * arbHelper.ml.x * arbHelper.ml.y;
-            uint256 right = 1000 * arbHelper.ml.y * arbHelper.dxBar;
-            if (right > left || arbHelper.dxBar == 0) {
+            uint256 minuend = 1000 * arbHelper.ml.x * arbHelper.ml.y;
+            uint256 subtrahend = 1000 * arbHelper.ml.y * arbHelper.dxBar;
+            if (subtrahend > minuend || arbHelper.dxBar == 0) {
                 arbHelper.dy = MAX_INT;
             } else {
-                arbHelper.dy = (left - right) / (997 * arbHelper.dxBar);
+                arbHelper.dy = (minuend - subtrahend) / (997 * arbHelper.dxBar);
             }
             console.log('arbHelper.dy: %s', arbHelper.dy);
+
+            uint256 dyOpt = _optimalAmountToSpendOnArbitrageForY(arbHelper.ml, arbHelper.mr);
 
             //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
             //Create arrays which hole the left AMMs and right AMMs. These are the ones which have been leveled within
@@ -96,16 +99,17 @@ library Arbitrage {
             }
             console.log('passed both for loops');
             console.log('===============================\n');
+            arbHelper.doneArbitraging = false;
 
-            if (arbHelper.right - arbHelper.left == 1) {
+            if (arbHelper.right - arbHelper.left == 1 || (dyOpt < arbHelper.dyBar && dyOpt < arbHelper.dy)) {
                 console.log('-----------------------------');
                 console.log('not broken1');
                 console.log('-----------------------------');
                 //If the union of the left and right arrays is all of the AMMs, then the last step is to just
                 // arbitrage on their aggregates.
-                uint256 dyOpt = _optimalAmountToSpendOnArbitrageForY(arbHelper.ml, arbHelper.mr);
                 console.log('after _optimalAmountToSpendOnArbitrageForY() = %s', dyOpt);
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, dyOpt);
+                arbHelper.doneArbitraging = true;
                 console.log('-----------------------------');
                 console.log('not broken4');
                 console.log('-----------------------------');
@@ -116,7 +120,7 @@ library Arbitrage {
                 //Need to level the left AMMs, as the cost of leveling the right ones would be higher
                 ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsUpTol, arbHelper.dyBar);
                 arbHelper.increaseLow = true;
-            } else {
+            } else if (arbHelper.dyBar >= arbHelper.dy) {
                 console.log('-----------------------------');
                 console.log('not broken3');
                 console.log('-----------------------------');
@@ -155,7 +159,7 @@ library Arbitrage {
 
             //Depending on which value was lowest at the start, we either move 'l' up, or 'r' down, and update
             // aggregate pools
-            if (arbHelper.increaseLow) {
+             if (arbHelper.increaseLow) {
                 arbHelper.ml.x += amms[arbHelper.sortedAmmIndices[++arbHelper.left]].x;
                 arbHelper.ml.y += amms[arbHelper.sortedAmmIndices[arbHelper.left]].y;
             } else {
@@ -165,6 +169,10 @@ library Arbitrage {
             console.log('AMM1: (%s, %s)', amms[0].x, amms[0].y);
             console.log('AMM2: (%s, %s)', amms[1].x, amms[1].y);
             console.log('AMM3: (%s, %s)', amms[2].x, amms[2].y);
+
+            if (arbHelper.doneArbitraging) {
+                break;
+            }
         }
     }
 
@@ -246,5 +254,6 @@ library Arbitrage {
         uint256 dxBar;
         uint256 dy;
         bool increaseLow;
+        bool doneArbitraging;
     }
 }
