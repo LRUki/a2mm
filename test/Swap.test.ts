@@ -6,11 +6,29 @@ import {
   getBalanceOfERC20,
   topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
-import { ContractFactory } from "@ethersproject/contracts";
-import { BigNumber } from "@ethersproject/bignumber";
+import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
   before(async function () {
-    this.Swap = await ethers.getContractFactory("Swap");
+    const sharedFunctionsAddress = await deployContract("SharedFunctions");
+
+    this.Arbitrage = await ethers.getContractFactory("Arbitrage", {
+      libraries: { SharedFunctions: sharedFunctionsAddress },
+    });
+    this.arbitrage = await this.Arbitrage.deploy();
+    await this.arbitrage.deployed();
+
+    this.Route = await ethers.getContractFactory("Route", {
+      libraries: { SharedFunctions: sharedFunctionsAddress },
+    });
+    this.route = await this.Route.deploy();
+    await this.route.deployed();
+
+    this.Swap = await ethers.getContractFactory("Swap", {
+      libraries: {
+        Arbitrage: this.arbitrage.address,
+        Route: this.route.address,
+      },
+    });
   });
 
   beforeEach(async function () {
@@ -48,7 +66,7 @@ describe("==================================== Swap ============================
     );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
-      (e: { event: string; args: string[] }) => e.event == "Swap"
+      (e: { event: string; args: string[] }) => e.event == "SwapEvent"
     );
     expect(swapEvent).to.have.lengthOf(1);
     const { amountOut } = swapEvent[0].args;

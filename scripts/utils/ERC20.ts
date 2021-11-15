@@ -1,8 +1,7 @@
 import { ethers } from "hardhat";
 import { assert } from "chai";
-import { Token, tokenToAddress, tokenToDecimal } from "./Token";
+import { Token, tokenToAddress } from "./Token";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Signer } from "@ethersproject/abstract-signer";
 
 export const topUpWETHAndApproveContractToUse = async (
   signer: SignerWithAddress,
@@ -34,10 +33,7 @@ const convertEthToWETH = async (
   signer: SignerWithAddress,
   amountOfEth: string
 ): Promise<void> => {
-  const abi = [
-    "function deposit() payable",
-    "function approve(address guy, uint wad) external returns (bool)",
-  ];
+  const abi = ["function deposit() payable"];
   const tokenContract = new ethers.Contract(
     tokenToAddress[Token.WETH],
     abi,

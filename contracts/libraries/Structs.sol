@@ -8,14 +8,12 @@ library Structs {
     struct Amm {
         uint256 x;
         uint256 y;
-        // uint k = x*y;
     }
 
 
     struct AmountsToSendToAmm {
         uint256 x;
         uint256 y;
-        address factoryAddress;
     }
 
 
