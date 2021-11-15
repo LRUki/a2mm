@@ -17,7 +17,21 @@ describe("==================================== Arbitrage =======================
         await this.arbitrage.deployed();
     });
 
-    it("Arbitrage runs", async function () {
+    it("Arbitrage runs 1", async function () {
+        //TODO: test this properly
+        const amm = await this.arbitrage.arbitrageWrapper(
+            [
+                toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+                toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+                toStringMap([500 * TEN_TO_18, 200 * TEN_TO_18]),
+                toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
+            ],
+            `${0.000031 * TEN_TO_18}`
+        );
+        console.log(amm.toString(), "ARBITRAGE 1");
+    });
+
+    it("Arbitrage runs 2", async function () {
         //TODO: test this properly
         const amm = await this.arbitrage.arbitrageWrapper(
             [
@@ -25,8 +39,8 @@ describe("==================================== Arbitrage =======================
                 toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
                 toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
             ],
-            `${0.000031 * TEN_TO_18}`
+            `${31 * TEN_TO_18}`
         );
-        console.log(amm.toString(), "ARBITRAGE");
+        console.log(amm.toString(), "ARBITRAGE 2");
     });
 });

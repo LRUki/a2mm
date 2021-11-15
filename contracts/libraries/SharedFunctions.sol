@@ -48,7 +48,7 @@ library SharedFunctions {
     // @return amountOut - how much of Y we would get if we traded x of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
 //        require(dx > 0, "Insufficient 'dx'");
-        require(x > 0 && y > 0, "Insufficient liquidity: x or y");
+        require(y > 0, "Insufficient liquidity: y");
         if (dx == 0) {
             return 0;
         }
@@ -71,13 +71,13 @@ library SharedFunctions {
 
     function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private view returns (uint256) {
         //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        require(t11 > 0 && t12 > 0 && t21 > 0 && t22 > 0, "Liquidity must be more than 0.");
+        require(t12 > 0 && t22 > 0, "Liquidity must be more than 0.");
         uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
         uint256 right = t11 * t22;
-        console.log('t11 : %s', t11);
-        console.log('t12 : %s', t12);
-        console.log('t21 : %s', t21);
-        console.log('t22 : %s', t22);
+//        console.log('t11 : %s', t11);
+//        console.log('t12 : %s', t12);
+//        console.log('t21 : %s', t21);
+//        console.log('t22 : %s', t22);
         if (right >= left) {
             //We can't level these any more than they are
             return 0;
