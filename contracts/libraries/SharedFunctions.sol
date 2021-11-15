@@ -4,7 +4,6 @@ pragma solidity 0.6.6 || 0.8.3;
 pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
-import "hardhat/console.sol";
 
 
 library SharedFunctions {
@@ -74,10 +73,6 @@ library SharedFunctions {
         require(t12 > 0 && t22 > 0, "Liquidity must be more than 0.");
         uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
         uint256 right = t11 * t22;
-//        console.log('t11 : %s', t11);
-//        console.log('t12 : %s', t12);
-//        console.log('t21 : %s', t21);
-//        console.log('t22 : %s', t22);
         if (right >= left) {
             //We can't level these any more than they are
             return 0;
