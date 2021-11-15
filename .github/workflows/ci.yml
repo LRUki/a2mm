@@ -1,7 +1,11 @@
 name: CI
 
 on: [push]
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> main
 jobs:
   super-lint:
     name: Lint code
@@ -42,4 +46,9 @@ jobs:
   #     - name: Deploy
   #       run: |
   #         echo { \"mnemonic\": \"${{ secrets.MNEMONIC }}\", \"url\": \"${{ secrets.URL }}\" } > secret.json
+<<<<<<< HEAD
   #         npm run deploy --network=ropsten
+=======
+  #         npm run deploy --network=ropsten  
+  
+>>>>>>> main
