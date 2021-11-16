@@ -5,6 +5,27 @@ import deployContract from "../scripts/utils/deploy";
 const TEN_TO_18 = Math.pow(10, 18);
 // helper functions for testing
 const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
+
+function quantityOfYForX(x: number, y: number, dx: number) {
+    return dx * 997 * y / (x * 1000 + dx * 997);
+}
+
+function quantityOfXForY(x: number, y: number, dy: number){
+    return quantityOfYForX(y, x, dy);
+}
+
+function calculateRatio(arrX: number, arrY: number, ammX: number, ammY: number) {
+    let ratio;
+    if (ammX == 0) {
+        let xGain = quantityOfXForY(arrX, arrY, ammY);
+        ratio = (arrY + ammY) / (arrX - xGain);
+    } else {
+        let yGain = quantityOfYForX(arrX, arrY, ammX);
+        ratio = (arrY - yGain) / (arrX + ammX);
+    }
+    return ratio;
+}
+
 describe("==================================== Arbitrage ====================================", function () {
     before(async function () {
         const sharedFunctionAddress = await deployContract("SharedFunctions");
@@ -17,8 +38,7 @@ describe("==================================== Arbitrage =======================
         await this.arbitrage.deployed();
     });
 
-    it("Arbitrage runs 1", async function () {
-        //TODO: test this properly
+    it("Flash loan is required when we hold no Y", async function () {
         const amm = await this.arbitrage.arbitrageWrapper(
             [
                 toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
@@ -26,21 +46,103 @@ describe("==================================== Arbitrage =======================
                 toStringMap([500 * TEN_TO_18, 200 * TEN_TO_18]),
                 toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
             ],
-            `${0.000031 * TEN_TO_18}`
+            `${0}`
         );
-        console.log(amm.toString(), "ARBITRAGE 1");
+        expect(amm[1].toString()).to.not.equal('0');
     });
 
-    it("Arbitrage runs 2", async function () {
-        //TODO: test this properly
+    it("Arbitrage fails when only one AMM supplied", async function () {
+        //TODO: how do we do this test? I want to make sure that it fails because only one AMM was passed
+        try {
+            await this.arbitrage.arbitrageWrapper(
+                [
+                    toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+                ],
+                `${0.0031 * TEN_TO_18}`
+            );
+        } catch (error) {
+            console.log(error);
+        }
+    });
+
+    it("Arbitrage runs when exactly two AMMs supplied (edge case)", async function () {
+        await this.arbitrage.arbitrageWrapper(
+            [
+                toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+                toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
+            ],
+            `${0.0031 * TEN_TO_18}`
+        );
+    });
+
+    it("No arbitrage opportunity - nothing sent anywhere", async function () {
+        let ammsArr = [
+            toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+            toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
+            toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
+            toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+        ]
+        const amm = await this.arbitrage.arbitrageWrapper(
+            ammsArr,
+            `${0.0031 * TEN_TO_18}`
+        );
+
+        for (let i = 0; i < ammsArr.length; i++) {
+            expect(amm[0][i].x.toString()).to.equal('0');
+            expect(amm[0][i].y.toString()).to.equal('0');
+        }
+        expect(amm[1].toString()).to.equal('0');
+    });
+
+    it("Holding lots of Y means no flash loan required:", async function () {
         const amm = await this.arbitrage.arbitrageWrapper(
             [
                 toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
                 toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
                 toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
             ],
-            `${31 * TEN_TO_18}`
+            `${100 * TEN_TO_18}`
         );
-        console.log(amm.toString(), "ARBITRAGE 2");
+        expect(amm[1].toString()).to.equal('0');
+    });
+
+    it("Ratios Y/X about equal after arbitrage done", async function () {
+        //TODO
+        let ammsArr = [
+            toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+            toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+        ];
+
+        const amm = await this.arbitrage.arbitrageWrapper(
+            ammsArr,
+            `${0.31 * TEN_TO_18}`
+        );
+
+        let firstRatio = calculateRatio(Number(ammsArr[0][0]), Number(ammsArr[0][1]), Number(amm[0][0].x), Number(amm[0][0].y));
+        for (let i = 1; i < ammsArr.length; i++) {
+            expect(calculateRatio(Number(ammsArr[i][0]), Number(ammsArr[i][1]), Number(amm[0][i].x), Number(amm[0][i].y))).to.approximately(firstRatio, 0.01);
+        }
+    });
+
+    it("amounts of Y sent to AMMs = amount of Y held + Flash loan", async function () {
+        let amountOfYHeld = 0.000000031 * TEN_TO_18;
+        let ammsArr = [
+            toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+            toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+        ];
+        const amm = await this.arbitrage.arbitrageWrapper(
+            ammsArr, `${amountOfYHeld}`
+        );
+
+        let ySum = 0;
+        for (let i = 0; i < ammsArr.length; i++) {
+            ySum += Number(amm[0][i].y.toString());
+        }
+        // oddly enough, the inaccuracy here comes from javascript's 'Number' instead of from solidity
+        expect((Number(amm[1].toString()) + amountOfYHeld)).to.approximately(ySum, 1000);
     });
 });
