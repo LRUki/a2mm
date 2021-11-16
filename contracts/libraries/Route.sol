@@ -10,7 +10,7 @@ library Route {
 
     //functions below are only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
-    function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory, uint256, bool) {
+    function routeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (uint256[] memory, uint256, bool) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -21,19 +21,18 @@ library Route {
 
     // @param amms - All AMM liquidity pools (x, y)
     // @param amountOfX - how much of X we are willing to trade for Y
-    // @return xSellYGain - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
+    // @return xToSendToAmms - amount of X we should sell at each AMM, ordered in the same way as the order of AMMs were passed in
     // @return totalY - how much of Y we get overall
     // @return shouldArbitrage - 'true' if we didn't spend enough of X to level all AMMs; otherwise 'false'
-    function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.XSellYGain[] memory xSellYGain, uint256 totalY, bool shouldArbitrage) {
+    function route(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (uint256[] memory xToSendToAmms, uint256 totalY, bool shouldArbitrage) {
         require(amms.length >= 1, "Need at least 1 AMM in 'amms'");
 
-        xSellYGain = new Structs.XSellYGain[](amms.length);
+        xToSendToAmms = new uint256[](amms.length);
 
         if (amms.length == 1) {
             totalY = SharedFunctions.quantityOfYForX(amms[0], amountOfX);
-            xSellYGain[0].x = amountOfX;
-            xSellYGain[0].y = totalY;
-            return (xSellYGain, totalY, false);
+            xToSendToAmms[0] = amountOfX;
+            return (xToSendToAmms, totalY, false);
         }
 
         RouteHelper memory routeHelper = RouteHelper(
@@ -85,8 +84,7 @@ library Route {
             uint256[] memory splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
             for (uint256 k = 0; k < routeHelper.elemsAddedToLeveledAmmIndices; ++k) {
                 uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[k], splits[k]);
-                xSellYGain[routeHelper.sortedIndices[k]].x += splits[k];
-                xSellYGain[routeHelper.sortedIndices[k]].y += yGain;
+                xToSendToAmms[routeHelper.sortedIndices[k]] += splits[k];
                 amms[routeHelper.sortedIndices[k]].x += splits[k];
                 amms[routeHelper.sortedIndices[k]].y -= yGain;
             }

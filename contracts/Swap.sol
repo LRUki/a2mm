@@ -34,14 +34,19 @@ contract Swap is DexProvider {
             (amms[i].x, amms[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
         }
         
-        (Structs.AmountsToSendToAmm[] memory route, uint256 flashLoanRequiredAmount) = calculateRouteAndArbitarge(amms, amountIn);
-        // require(route[0].x + route[1].x == amountIn, "wrong route");
-        // uint256 amountOut = 0;
-        // for (uint256 i = 0; i < route.length; ++i) {
-	    //     amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
-        // }
-        // require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
-        // emit SwapEvent(amountIn, amountOut);
+
+        (Structs.AmountsToSendToAmm[] memory amountsToSendToAmm, uint256 amountOfYtoFlashLoan) = calculateRouteAndArbitarge(amms, amountIn);
+        //TODO: flash loan `amountOfYtoFlashLoan`
+        uint256 amountOutY = 0;
+        uint256 amountOutX = 0;
+        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+            amountOutX += executeSwap(_factoryAddresses[i], tokenOut, tokenIn, amountsToSendToAmm[i].y);
+	        amountOutY += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x);
+        }
+
+        //TODO: remove flashloand from amountOutY? what about amountOfX? flash loan fee?
+        require(IERC20(tokenOut).transfer(msg.sender, amountOutY - amountOfYtoFlashLoan), "token failed to be sent back");
+        // emit SwapEvent(amountOutY - amountOfYtoFlashLoan);
     }
 
 
@@ -59,17 +64,17 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {        
-        (Structs.XSellYGain[] memory routingsAndGains, uint256 totalYGainedFromRouting, bool shouldArbitrage) = Route.route(amms, amountOfX);
+    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 amountOfYtoFlashLoan) {        
+        (uint256[] memory xToSendToAmmsFromRounting, uint256 totalYGainedFromRouting, bool shouldArbitrage) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
-            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routingsAndGains[i].x, 0);
+            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(xToSendToAmmsFromRounting[i], 0);
         }
 
-        flashLoanRequiredAmount = 0;
+        amountOfYtoFlashLoan = 0;
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrages, flashLoanRequiredAmount) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
+            (arbitrages, amountOfYtoFlashLoan) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
             for (uint256 i = 0; i < amms.length; i++) {
                 amountsToSendToAmms[i].x += arbitrages[i].x;
                 amountsToSendToAmms[i].y += arbitrages[i].y;

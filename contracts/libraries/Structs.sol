@@ -15,10 +15,4 @@ library Structs {
         uint256 x;
         uint256 y;
     }
-
-
-    struct XSellYGain {
-        uint256 x;
-        uint256 y;
-    }
 }
