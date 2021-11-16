@@ -6,12 +6,30 @@ const TEN_TO_18 = Math.pow(10, 18);
 // helper functions for testing
 const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
 
+//TODO: the following three functions are copy-pasted and then slightly adapted for javascript. Should we instead perhaps just call on the smart contract functions and use their outputs, since we would have unit tested them anyway?
 function quantityOfYForX(x: number, y: number, dx: number) {
     return dx * 997 * y / (x * 1000 + dx * 997);
 }
 
 function quantityOfXForY(x: number, y: number, dy: number){
     return quantityOfYForX(y, x, dy);
+}
+
+function whatPrecision(x: number) {
+    let xStr = x.toString();
+    if (xStr[0] == '0') {
+        let zerosAfterPoint = 0;
+        for (let i = 2; xStr[i] == '0'; ++i) {
+            zerosAfterPoint++;
+        }
+        return -zerosAfterPoint - 2;
+    }
+
+    let nonZerosBeforePoint = 0;
+    for (let i = 0; xStr[i] != '.' && i < xStr.length; ++i) {
+        nonZerosBeforePoint++;
+    }
+    return nonZerosBeforePoint - 2;
 }
 
 function calculateRatio(arrX: number, arrY: number, ammX: number, ammY: number) {
@@ -107,7 +125,6 @@ describe("==================================== Arbitrage =======================
     });
 
     it("Ratios Y/X about equal after arbitrage done", async function () {
-        //TODO
         let ammsArr = [
             toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
             toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
@@ -122,7 +139,7 @@ describe("==================================== Arbitrage =======================
 
         let firstRatio = calculateRatio(Number(ammsArr[0][0]), Number(ammsArr[0][1]), Number(amm[0][0].x), Number(amm[0][0].y));
         for (let i = 1; i < ammsArr.length; i++) {
-            expect(calculateRatio(Number(ammsArr[i][0]), Number(ammsArr[i][1]), Number(amm[0][i].x), Number(amm[0][i].y))).to.approximately(firstRatio, 0.01);
+            expect(Math.abs(calculateRatio(Number(ammsArr[i][0]), Number(ammsArr[i][1]), Number(amm[0][i].x), Number(amm[0][i].y)) - firstRatio)).to.lessThan(Math.pow(10, whatPrecision(firstRatio)));
         }
     });
 
