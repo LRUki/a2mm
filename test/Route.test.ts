@@ -1,5 +1,6 @@
 import deployContract from "../scripts/utils/deploy";
 import { ethers } from "hardhat";
+import { expect } from "chai";
 const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== Route ====================================", function () {
   before(async function () {
@@ -14,16 +15,28 @@ describe("==================================== Route ===========================
   });
 
   it("Route runs", async function () {
-    //TODO: test this properly
-    const amm = await this.route.routeWrapper(
+    let testExamples =
       [
-        toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-        toStringMap([0.1 * TEN_TO_18, 0.2 * TEN_TO_18]),
-      ],
-      `${0.000031 * TEN_TO_18}`
-    );
-    console.log(amm.toString(), "ROUTE");
+        {
+          ammsArray: [
+            toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
+            toStringMap([1 * TEN_TO_18, 4 * TEN_TO_18]),
+            toStringMap([0.2 * TEN_TO_18, 0.2 * TEN_TO_18]),
+          ],
+          amountOfX: `${200}`,
+          result: [2, 0, 1]
+        },
+      ]
+    for (const element of testExamples) {
+      //let xSellYGain,totalY,shouldArbitrage = await this.route.routeWrapper(element.ammsArray,element.amountOfX)
+      // expect(res.toString()).to.equal((element.result).toString());
+      const [xSellYGain,totalY,shouldArbitrage] = await this.route.routeWrapper(element.ammsArray,element.amountOfX)
+      console.log("==================================== Route ====================================")
+      console.log(xSellYGain)
+      console.log(totalY)
+      console.log(shouldArbitrage)
+      console.log("==================================== Route ====================================")
+    }
   });
 });
 

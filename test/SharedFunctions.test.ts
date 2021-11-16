@@ -28,7 +28,7 @@ describe("==================================== SharedFunctions =================
     );
     console.log(res.toString(), "x to approach in Solidity");
     const exp = quantityOfYForX(
-      100 * TEN_TO_18, 
+      100 * TEN_TO_18,
       200 * TEN_TO_18,
       200
     );
@@ -103,7 +103,7 @@ const quantityOfYForX = (
   dx: number
 ): number => {
   expect(x > 0 && y > 0)
-  if (dx == 0 )
+  if (dx == 0)
     return 0
   let q = y / (1000 * x + 997 * dx);
   let r = y - q * (1000 * x + 997 * dx); //r = y % (1000*amm.x + 997*x)
