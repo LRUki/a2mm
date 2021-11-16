@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
+import assert from "assert";
 
 const TEN_TO_18 = Math.pow(10, 18);
 // helper functions for testing
@@ -15,21 +16,22 @@ function quantityOfXForY(x: number, y: number, dy: number){
     return quantityOfYForX(y, x, dy);
 }
 
-function whatPrecision(x: number) {
+function whatPrecision(x: number, sf: number) {
+    assert(x != 0);
     let xStr = x.toString();
     if (xStr[0] == '0') {
         let zerosAfterPoint = 0;
         for (let i = 2; xStr[i] == '0'; ++i) {
             zerosAfterPoint++;
         }
-        return -zerosAfterPoint - 2;
+        return -zerosAfterPoint - sf;
     }
 
     let nonZerosBeforePoint = 0;
     for (let i = 0; xStr[i] != '.' && i < xStr.length; ++i) {
         nonZerosBeforePoint++;
     }
-    return nonZerosBeforePoint - 2;
+    return nonZerosBeforePoint - sf;
 }
 
 function calculateRatio(arrX: number, arrY: number, ammX: number, ammY: number) {
@@ -93,7 +95,7 @@ describe("==================================== Arbitrage =======================
         );
     });
 
-    it("No arbitrage opportunity - nothing sent anywhere", async function () {
+    it("No arbitrage opportunity - nothing sent anywhere, and no flash loan", async function () {
         let ammsArr = [
             toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
             toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
@@ -139,12 +141,12 @@ describe("==================================== Arbitrage =======================
 
         let firstRatio = calculateRatio(Number(ammsArr[0][0]), Number(ammsArr[0][1]), Number(amm[0][0].x), Number(amm[0][0].y));
         for (let i = 1; i < ammsArr.length; i++) {
-            expect(Math.abs(calculateRatio(Number(ammsArr[i][0]), Number(ammsArr[i][1]), Number(amm[0][i].x), Number(amm[0][i].y)) - firstRatio)).to.lessThan(Math.pow(10, whatPrecision(firstRatio)));
+            expect(Math.abs(calculateRatio(Number(ammsArr[i][0]), Number(ammsArr[i][1]), Number(amm[0][i].x), Number(amm[0][i].y)) - firstRatio)).to.lessThan(Math.pow(10, whatPrecision(firstRatio, 2)));
         }
     });
 
     it("amounts of Y sent to AMMs = amount of Y held + Flash loan", async function () {
-        let amountOfYHeld = 0.000000031 * TEN_TO_18;
+        let amountOfYHeld = BigInt(0.000000031 * TEN_TO_18);
         let ammsArr = [
             toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
             toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
@@ -155,11 +157,11 @@ describe("==================================== Arbitrage =======================
             ammsArr, `${amountOfYHeld}`
         );
 
-        let ySum = 0;
+        let ySum = BigInt(0);
         for (let i = 0; i < ammsArr.length; i++) {
-            ySum += Number(amm[0][i].y.toString());
+            ySum += BigInt(amm[0][i].y.toString());
         }
-        // oddly enough, the inaccuracy here comes from javascript's 'Number' instead of from solidity
-        expect((Number(amm[1].toString()) + amountOfYHeld)).to.approximately(ySum, 1000);
+
+        expect((BigInt(amm[1]) + amountOfYHeld)).to.equal(ySum);
     });
 });
