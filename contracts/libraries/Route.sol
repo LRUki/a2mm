@@ -52,8 +52,8 @@ library Route {
 
         RouteHelper memory routeHelper = RouteHelper(
             // Sort the AMMs - best to worst in exchange rate.
-            SharedFunctions._sortAmmArrayIndicesByExchangeRate(amms),
-            Structs.Amm(amms[0].x, amms[0].y),
+            SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms),
+            Structs.Amm(amms[amms.length - 1].x, amms[amms.length - 1].y),
             Structs.Amm(0, 0),
             0,
             new Structs.Amm[](amms.length),

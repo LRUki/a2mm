@@ -59,7 +59,7 @@ describe("==================================== SharedFunctions =================
         },
       ]
     for (const element of testExamples) {
-      const res = await this.sharedFunctions.sortAmmArrayIndicesByExchangeRate(element.ammsArray)
+      const res = await this.sharedFunctions.sortAmmArrayIndicesByExchangeRateWrapper(element.ammsArray)
       expect(res.toString()).to.equal((element.result).toString());
     }
   });

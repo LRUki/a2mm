@@ -106,7 +106,7 @@ library SharedFunctions {
         return (1002 * (left - right)) / (1000 * t22);
     }
 
-    //(Appendix B, formula 17)
+    // (Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
@@ -159,7 +159,7 @@ library SharedFunctions {
     // @notice - uses insertion sort, as we don't expect to have a large list (I think Arthur mentioned only using 4-5 maximum)
     // @param amms - all of the AMMs we are considering (either for routing or arbitrage)
     // @return indices - the indices of the amms array sorted by their exchange rate in ascending Y/X order
-    function _sortAmmArrayIndicesByExchangeRate(Structs.Amm[] memory amms)
+    function sortAmmArrayIndicesByExchangeRate(Structs.Amm[] memory amms)
         public
         pure
         returns (uint256[] memory indices)
@@ -185,14 +185,14 @@ library SharedFunctions {
         }
     }
 
-    function sortAmmArrayIndicesByExchangeRate(
+    function sortAmmArrayIndicesByExchangeRateWrapper(
         uint256[2][] memory ammsArray
     ) public pure returns (uint256[] memory) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint8 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
         }
-        return _sortAmmArrayIndicesByExchangeRate(amms);
+        return sortAmmArrayIndicesByExchangeRate(amms);
     }
 
     function howToSplitRoutingOnLeveledAmmsWrapper(

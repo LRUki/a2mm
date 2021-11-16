@@ -33,7 +33,7 @@ library Arbitrage {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
 
         ArbHelper memory arbHelper = ArbHelper(
-            SharedFunctions._sortAmmArrayIndicesByExchangeRate(amms)
+            SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
         , 0
         , amms.length - 1
         , Structs.Amm(0, 0)
