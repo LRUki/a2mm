@@ -59,7 +59,7 @@ describe("==================================== DexProvider =====================
     );
     const txStatus = await tx.wait();
     const executeSwapEvent = txStatus.events.filter(
-      (e: { event: string; args: string[] }) => e.event == "ExecuteSwap"
+      (e: { event: string; args: string[] }) => e.event == "ExecuteSwapEvent"
     );
     expect(executeSwapEvent).to.have.lengthOf(1);
     const { amountIn, amountOut } = executeSwapEvent[0].args;

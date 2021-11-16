@@ -73,19 +73,6 @@ library SharedFunctions {
     }
 
 
-    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256) {
-        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        require(t12 > 0 && t22 > 0, "Liquidity must be more than 0.");
-        uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
-        uint256 right = t11 * t22;
-        if (right >= left) {
-            //We can't level these any more than they are
-            return 0;
-        }
-        return (1002 * (left - right)) / (1000 * t22);
-    }
-
-
     //(Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
@@ -122,6 +109,19 @@ library SharedFunctions {
         uint256 y2 = worseAmm.y;
 
         return _howMuchToSpendToLevelAmms(y1, y2, x1, x2);
+    }
+
+
+    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256) {
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        require(t12 > 0 && t22 > 0, "Liquidity must be more than 0.");
+        uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
+        uint256 right = t11 * t22;
+        if (right >= left) {
+            //We can't level these any more than they are
+            return 0;
+        }
+        return (1002 * (left - right)) / (1000 * t22);
     }
 
 
