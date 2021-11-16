@@ -14,10 +14,10 @@ import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 
-contract Swap is DexProvider {
-    address payable constant private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address payable constant private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address payable[2] _factoryAddresses = [_sushiFactoryAddress, _uniV2FactoryAddress];
+contract SwapContract is DexProvider {
+    address payable constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address payable constant private _UNI_V2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address payable[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNI_V2_FACTORY_ADDRESS];
     // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
@@ -50,7 +50,7 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
@@ -76,6 +76,8 @@ contract Swap is DexProvider {
     //allow contract to recieve eth
     //not sure if we need it but might as well
     receive() external payable {
-        // _WETH.deposit{value:msg.value}();
+        uint256 i = 0;
+        i++;
+//        IWETH9.deposit{value:msg.value}();
     }
 }

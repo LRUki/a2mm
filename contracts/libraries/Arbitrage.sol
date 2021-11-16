@@ -8,11 +8,11 @@ import "./SharedFunctions.sol";
 
 
 library Arbitrage {
-    uint256 constant MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 private constant _MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     //function below is only for testing purposes
     //we need to expose a wrapper functions as there is an issue passing in Structs from javascript
-    function arbitrageWrapper(uint256[2][] memory ammsArray, uint256 amountOfYHeld) public view returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+    function arbitrageWrapper(uint256[2][] memory ammsArray, uint256 amountOfYHeld) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -28,7 +28,7 @@ library Arbitrage {
     // @return amountsToSendToAmms - the calculated amounts of (x, y) pairs to send to the AMMs for arbitrage. \
     // Ordered in the same order as the argument.
     // @return flashLoanRequiredAmount - how large of a flash loan is required to complete the arbitrage
-    function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
 
         ArbHelper memory arbHelper = ArbHelper(
@@ -84,7 +84,7 @@ library Arbitrage {
             } else if (subtrahend >= minuend) {
                 //If this is the case, then it means that we need to spend infinity of Y on arbHelper.ml to actually
                 // buy that much of X; hence, we set arbHelper.dy as high as we possibly can.
-                arbHelper.dy = MAX_INT;
+                arbHelper.dy = _MAX_INT;
             } else {
                 arbHelper.dy = (1000 * arbHelper.ml.y * arbHelper.dxBar) / (minuend - subtrahend);
             }
@@ -195,7 +195,7 @@ library Arbitrage {
     // @param t12 - The amount of liquidity of token 't1' on the second AMM
     // @param t22 - The amount of liquidity of token 't2' on the second AMM
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrage(uint256 t11, uint256 t21, uint256 t12, uint256 t22) private view returns (uint256) {
+    function _optimalAmountToSpendOnArbitrage(uint256 t11, uint256 t21, uint256 t12, uint256 t22) private pure returns (uint256) {
         assert(t21 * t12 >= t22 * t11);
         uint256 left = 997 * SharedFunctions.sqrt(t11 * t12) * SharedFunctions.sqrt(t21 * t22) / 1000;
         uint256 right = t11 * t22;
@@ -215,7 +215,7 @@ library Arbitrage {
     // @param amm1 - The AMM whose price for Y is lower, i.e. Y/X is higher; we would sell X here
     // @param amm2 - The AMM whose price for Y is higher, i.e. Y/X is lower; we would sell Y here
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrageForX(Structs.Amm memory amm1, Structs.Amm memory amm2) private view returns (uint256) {
+    function _optimalAmountToSpendOnArbitrageForX(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (uint256) {
         require(amm1.y * amm2.x >= amm2.y * amm1.x, "Y must be cheaper on amm1!");
         return _optimalAmountToSpendOnArbitrage(amm1.x, amm1.y, amm2.x, amm2.y);
     }
@@ -229,7 +229,7 @@ library Arbitrage {
     // @param amm1 - The AMM whose price for X is lower, i.e. X/Y is higher; we would sell Y here
     // @param amm2 - The AMM whose price for X is higher, i.e. X/Y is lower; we would sell X here
     // @return dXOpt - the optimal amount we should wager on the arbitrage for optimal profit
-    function _optimalAmountToSpendOnArbitrageForY(Structs.Amm memory amm1, Structs.Amm memory amm2) private view returns (uint256) {
+    function _optimalAmountToSpendOnArbitrageForY(Structs.Amm memory amm1, Structs.Amm memory amm2) private pure returns (uint256) {
         require(amm1.x * amm2.y >= amm2.x * amm1.y, "X must be cheaper on amm1!");
         return _optimalAmountToSpendOnArbitrage(amm1.y, amm1.x, amm2.y, amm2.x);
     }

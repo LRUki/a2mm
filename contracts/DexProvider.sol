@@ -28,7 +28,7 @@ contract DexProvider {
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
 		require(pairAddress != address(0), "This pool does not exist");
        		(address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        	require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom failed, make sure user approved");
+        	require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "transferFrom: user must approve");
 	        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
         	(uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
         	amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut);

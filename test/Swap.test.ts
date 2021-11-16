@@ -25,7 +25,7 @@ describe("==================================== Swap ============================
     this.route = await this.Route.deploy();
     await this.route.deployed();
 
-    this.Swap = await ethers.getContractFactory("Swap", {
+    this.Swap = await ethers.getContractFactory("SwapContract", {
       libraries: { Arbitrage: this.arbitrage.address, Route: this.route.address },
     });
   });
