@@ -58,6 +58,11 @@ library SharedFunctions {
     }
 
 
+    function quantityOfXForY(uint256 x, uint256 y, uint256 dy) public pure returns (uint256){
+        return quantityOfYForX(y, x, dy);
+    }
+
+
     function quantityOfYForX(Structs.Amm memory amm, uint256 dx) public pure returns (uint256){
         return quantityOfYForX(amm.x, amm.y, dx);
     }
