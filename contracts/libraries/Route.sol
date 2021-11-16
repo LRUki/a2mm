@@ -13,7 +13,7 @@ library Route {
         public
         view
         returns (
-            uint256[2][] memory,
+            Structs.XSellYGain[] memory,
             uint256,
             bool
         )
@@ -22,21 +22,8 @@ library Route {
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
         }
-        
-        Structs.XSellYGain[] memory xSellYGain = new Structs.XSellYGain[](amms.length);
-        uint256 totalY = 0;
-        bool shouldArbitrage;
-        (xSellYGain,totalY,shouldArbitrage) =  route(amms, amountOfX);
-
-        uint256[2][] memory xSellYGainArray = new uint256[2][](xSellYGain.length);
-        for (uint256 i = 0; i < ammsArray.length; ++i) {
-            xSellYGainArray[i][0] = amms[i].x;
-            xSellYGainArray[i][1] = amms[i].y;
-        }
-        return (xSellYGainArray, totalY, shouldArbitrage);
+        return route(amms, amountOfX);
     }
-
-
 
     // @param amms - All AMM liquidity pools (x, y)
     // @param amountOfX - how much of X we are willing to trade for Y

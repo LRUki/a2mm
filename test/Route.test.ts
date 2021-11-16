@@ -32,8 +32,8 @@ describe("==================================== Route ===========================
       // expect(res.toString()).to.equal((element.result).toString());
       const [xSellYGain,totalY,shouldArbitrage] = await this.route.routeWrapper(element.ammsArray,element.amountOfX)
       console.log("==================================== Route ====================================")
-      console.log(xSellYGain)
-      console.log(totalY)
+      console.log(xSellYGain[0].toString())
+      console.log(totalY.toString())
       console.log(shouldArbitrage)
       console.log("==================================== Route ====================================")
     }
