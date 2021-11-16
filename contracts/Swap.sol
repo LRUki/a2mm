@@ -16,9 +16,9 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    address payable constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address payable constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address payable[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNIV2_FACTORY_ADDRESS];
+    address constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNIV2_FACTORY_ADDRESS];
     
     event SwapEvent(uint256 amountIn, uint256 amountOut);
     // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -28,14 +28,20 @@ contract Swap is DexProvider {
 
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
-        Structs.AmountsToSendToAmm[] memory route = _mockAmountsToSendToAmms(amountIn);
-        require(route[0].x + route[1].x == amountIn, "wrong route");
-        uint256 amountOut = 0;
-        for (uint256 i = 0; i < route.length; ++i) {
-	        amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
+        Structs.Amm[] memory amms = new Structs.Amm[](_factoryAddresses.length);
+        for (uint256 i = 0; i < _factoryAddresses.length; ++i) {
+            //TODO: check if tokenIN tokenOUt exists in the factory
+            (amms[i].x, amms[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
         }
-        require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
-        emit SwapEvent(amountIn, amountOut);
+        
+        (Structs.AmountsToSendToAmm[] memory route, uint256 flashLoanRequiredAmount) = calculateRouteAndArbitarge(amms, amountIn);
+        // require(route[0].x + route[1].x == amountIn, "wrong route");
+        // uint256 amountOut = 0;
+        // for (uint256 i = 0; i < route.length; ++i) {
+	    //     amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
+        // }
+        // require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
+        // emit SwapEvent(amountIn, amountOut);
     }
 
 
@@ -53,12 +59,8 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
-        bool shouldArbitrage;
-
-        uint256 totalYGainedFromRouting;
-        Structs.XSellYGain[] memory routingsAndGains;
-        (routingsAndGains, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
+    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {        
+        (Structs.XSellYGain[] memory routingsAndGains, uint256 totalYGainedFromRouting, bool shouldArbitrage) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routingsAndGains[i].x, 0);
