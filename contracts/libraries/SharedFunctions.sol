@@ -44,9 +44,9 @@ library SharedFunctions {
     // @param x - the amount of X in the AMM we are looking to trade at
     // @param y - the amount of Y in the AMM we are looking to trade at
     // @param dx - how much of X we are willing to potentially spend
-    // @return amountOut - how much of Y we would get if we traded x of X for Y
+    // @return amountOut - how much of Y we would get if we traded dx of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
-//        require(dx > 0, "Insufficient 'dx'");
+        require(dx > 0, "Insufficient funds: dx");
         require(y > 0, "Insufficient liquidity: y");
         if (dx == 0) {
             return 0;
