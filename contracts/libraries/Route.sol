@@ -95,7 +95,7 @@ library Route {
             }
 
             //We have to update the aggregated pool to reflect the changes made through the exchanges made above:
-            routeHelper.aggregatedPool = Structs.Amm(0, 0);
+            (routeHelper.aggregatedPool.x, routeHelper.aggregatedPool.y) = (0, 0);
             for (uint256 k = 0; k < amms.length - j; ++k) {
                 routeHelper.aggregatedPool.x += amms[routeHelper.sortedIndices[amms.length - 1 - k]].x;
                 routeHelper.aggregatedPool.y += amms[routeHelper.sortedIndices[amms.length - 1 - k]].y;
