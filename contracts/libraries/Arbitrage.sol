@@ -37,7 +37,6 @@ library Arbitrage {
         , amms.length - 1
         , Structs.Amm(0, 0)
         , Structs.Amm(0, 0)
-        , new Structs.Amm[](amms.length)
         , 0
         , 0
         , 0
@@ -51,7 +50,6 @@ library Arbitrage {
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; ++i) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(0, 0);
-            arbHelper.sortedAmms[i] = amms[arbHelper.sortedAmmIndices[i]];
         }
 
         flashLoanRequiredAmount = 0;
@@ -96,11 +94,11 @@ library Arbitrage {
             // their respective array.
             Structs.Amm[] memory sortedAmmsUpTol = new Structs.Amm[](arbHelper.left + 1);
             for (uint256 k = 0; k <= arbHelper.left; ++k) {
-                sortedAmmsUpTol[k] = arbHelper.sortedAmms[k];
+                sortedAmmsUpTol[k] = amms[arbHelper.sortedAmmIndices[k]];
             }
             Structs.Amm[] memory sortedAmmsrToEnd = new Structs.Amm[](amms.length - arbHelper.right);
             for (uint256 k = arbHelper.right; k < amms.length; ++k) {
-                sortedAmmsrToEnd[k - arbHelper.right] = arbHelper.sortedAmms[k];
+                sortedAmmsrToEnd[k - arbHelper.right] = amms[arbHelper.sortedAmmIndices[k]];
             }
             arbHelper.doneArbitraging = false;
 
@@ -122,7 +120,7 @@ library Arbitrage {
             //Route the difference in y needed to level the AMMs (to get some X) on the left AMMs (ml)
             uint256 xGainSum = 0;
             for (uint256 k = 0; k <= arbHelper.left; ++k) {
-                uint256 xGain = SharedFunctions.quantityOfXForY(arbHelper.sortedAmms[k], ySplits[k]);
+                uint256 xGain = SharedFunctions.quantityOfXForY(amms[arbHelper.sortedAmmIndices[k]], ySplits[k]);
                 xGainSum += xGain;
                 amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].y += ySplits[k];
                 amms[arbHelper.sortedAmmIndices[k]].y += ySplits[k];
@@ -138,7 +136,7 @@ library Arbitrage {
             //Then we also route the x we gained to the right AMMs (mr)
             uint256[] memory xSplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(sortedAmmsrToEnd, xGainSum);
             for (uint256 k = arbHelper.right; k < amms.length; ++k) {
-                uint256 yGain = SharedFunctions.quantityOfYForX(arbHelper.sortedAmms[k], xSplits[k - arbHelper.right]);
+                uint256 yGain = SharedFunctions.quantityOfYForX(amms[arbHelper.sortedAmmIndices[k]], xSplits[k - arbHelper.right]);
                 amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].x += xSplits[k - arbHelper.right];
                 amms[arbHelper.sortedAmmIndices[k]].x += xSplits[k - arbHelper.right];
                 amms[arbHelper.sortedAmmIndices[k]].y -= yGain;
@@ -241,7 +239,6 @@ library Arbitrage {
         uint256 right;
         Structs.Amm ml;
         Structs.Amm mr;
-        Structs.Amm[] sortedAmms;
         uint256 dyBar;
         uint256 dxBar;
         uint256 dy;
