@@ -49,9 +49,7 @@ library Route {
         shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
         for (uint256 j = amms.length - 1; j > 0; --j) {
-            uint256 i = j - 1;
-            uint256 nextBestAmmIndex = routeHelper.sortedIndices[i];
-            Structs.Amm memory nextBestAmm = amms[nextBestAmmIndex];
+            Structs.Amm memory nextBestAmm = amms[routeHelper.sortedIndices[j - 1]];
             routeHelper.deltaX = SharedFunctions.howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, nextBestAmm);
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
             if (routeHelper.deltaX == 0) {
