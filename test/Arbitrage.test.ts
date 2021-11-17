@@ -198,3 +198,5 @@ describe("==================================== Arbitrage =======================
     expect(BigInt(amm[1]) + amountOfYHeld).to.equal(ySum);
   });
 });
+
+export default whatPrecision;
