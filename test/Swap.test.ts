@@ -1,13 +1,11 @@
 import { ethers } from "hardhat";
 import { expect, assert } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
-import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 import {
   getBalanceOfERC20,
   topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
-import { ContractFactory } from "@ethersproject/contracts";
-import { BigNumber } from "@ethersproject/bignumber";
+
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
   before(async function () {
@@ -26,7 +24,10 @@ describe("==================================== Swap ============================
     await this.route.deployed();
 
     this.Swap = await ethers.getContractFactory("Swap", {
-      libraries: { Arbitrage: this.arbitrage.address, Route: this.route.address },
+      libraries: {
+        Arbitrage: this.arbitrage.address,
+        Route: this.route.address,
+      },
     });
   });
 
@@ -65,7 +66,7 @@ describe("==================================== Swap ============================
     );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
-      (e: { event: string; args: string[] }) => e.event == "Swap"
+      (e: { event: string; args: string[] }) => e.event == "SwapEvent"
     );
     expect(swapEvent).to.have.lengthOf(1);
     const { amountOut } = swapEvent[0].args;

@@ -16,13 +16,15 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    address payable constant private _sushiFactoryAddress = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address payable constant private _uniV2FactoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address payable[2] _factoryAddresses = [_sushiFactoryAddress, _uniV2FactoryAddress];
+    address payable constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address payable constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    address payable[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNIV2_FACTORY_ADDRESS];
+    
+    event SwapEvent(uint256 amountIn, uint256 amountOut);
     // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
-    event Swap(uint256 amountIn, uint256 amountOut);
+
 
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
@@ -33,7 +35,7 @@ contract Swap is DexProvider {
 	        amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
         }
         require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
-        emit Swap(amountIn, amountOut);
+        emit SwapEvent(amountIn, amountOut);
     }
 
 
@@ -51,15 +53,15 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public view returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function swapXforY(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
-        Structs.XSellYGain[] memory routingsAndGains;
-        (routingsAndGains, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
+        uint256[] memory routings;
+        (routings, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
-            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routingsAndGains[i].x, 0);
+            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routings[i], 0);
         }
 
         flashLoanRequiredAmount = 0;
@@ -77,6 +79,7 @@ contract Swap is DexProvider {
     //allow contract to recieve eth
     //not sure if we need it but might as well
     receive() external payable {
+        console.log(msg.sender);
         // _WETH.deposit{value:msg.value}();
     }
 }

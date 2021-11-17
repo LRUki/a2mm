@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "@ethersproject/bignumber";
+import deployContract from "../scripts/utils/deploy";
 const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== SharedFunctions ====================================", function () {
   before(async function () {
@@ -10,6 +11,22 @@ describe("==================================== SharedFunctions =================
     this.sharedFunctions = await this.SharedFunctions.deploy();
     await this.sharedFunctions.deployed();
   });
+
+  async function quantityOfYForX(x: bigint, y: bigint, dx: bigint) {
+    //TODO: Is there a better way to do it?
+
+    await deployContract("SharedFunctions");
+    const SharedFunctions = await ethers.getContractFactory("SharedFunctions");
+    const sharedFunctions = await SharedFunctions.deploy();
+
+    return await sharedFunctions.functions[
+      "quantityOfYForX(uint256,uint256,uint256)"
+    ](x, y, dx);
+  }
+
+  async function quantityOfXForY(x: bigint, y: bigint, dy: bigint) {
+    return await quantityOfYForX(y, x, dy);
+  }
 
   it("sqrt gives correct output", async function () {
     let num = 3000000;
@@ -21,21 +38,49 @@ describe("==================================== SharedFunctions =================
   });
 
   it("quantityOfYForX gives correct output", async function () {
-    const res = await this.sharedFunctions._quantityOfYForX(
-      `${100 * TEN_TO_18}`,
-      `${200 * TEN_TO_18}`,
-      `${200}`
+    const res = await quantityOfYForX(
+      BigInt(100 * TEN_TO_18),
+      BigInt(200 * TEN_TO_18),
+      BigInt(200),
     );
-    console.log(res.toString(), "x to approach in Solidity");
-    const exp = quantityOfYForX(
+    const exp = quantityOfYForXTsx(
       100 * TEN_TO_18,
       200 * TEN_TO_18,
       200
     );
-    console.log(
-      exp,
-      "x to approach in TSX"
-    );
+    expect(Math.round((res-exp)/10).toString()).to.equal((0).toString());
+  });
+
+  it("quantityOfYForX throws error if dx<=0 ", async function () {
+    var throwsError = false;
+    try {
+      const res = await quantityOfYForX(
+        BigInt(100 * TEN_TO_18),
+        BigInt(200 * TEN_TO_18),
+        BigInt(-200),
+      );
+    }
+    catch(error){
+      console.error(error);
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true);
+  });
+
+  it("quantityOfYForX throws error if y<=0 ", async function () {
+    var throwsError = false;
+    try {
+      const res = await quantityOfYForX(
+        BigInt(100 * TEN_TO_18),
+        BigInt(-200 * TEN_TO_18),
+        BigInt(200),
+      );
+    }
+    catch(error){
+      console.error(error);
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true);
   });
 
   it("sortAmmArrayIndicesByExchangeRate gives correct output", async function () {
@@ -65,17 +110,32 @@ describe("==================================== SharedFunctions =================
   });
 
 
-  it("calculates x to spend on better amm to approach the worse amm", async function () {
+  it("howMuchXToSpendToLevelAmms gives correct output", async function () {
     const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsWrapper(
       toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
       toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-    //TODO: how to match the results?
     console.log(res.toString(), "x to approach the worse amm in Solidity");
-    console.log(
-      res,
-      "x to approach the worse amm JS"
-    );
+    
+    const exp = howMuchToSpendToLevelAmms(100 * TEN_TO_18,200 * TEN_TO_18,100 * TEN_TO_18, 180 * TEN_TO_18)
+    console.log(exp.toString())
+
+    expect(Math.round((res-exp)/100000).toString()).to.equal((0).toString());
+  });
+
+  it("howMuchXToSpendToLevelAmms throws error if t12 <=0 || t22 <= 0", async function () {
+    var throwsError = false;
+    try {
+      const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsWrapper(
+        toStringMap([-100 * TEN_TO_18, 200 * TEN_TO_18]),
+        toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
+      );
+    }
+    catch(error){
+      console.error(error);
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true);
   });
 
   it("leveledAmms get split correctly", async function () {
@@ -97,7 +157,7 @@ describe("==================================== SharedFunctions =================
 // helper functions for testing
 const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
 
-const quantityOfYForX = (
+const quantityOfYForXTsx = (
   x: number,
   y: number,
   dx: number
@@ -108,4 +168,20 @@ const quantityOfYForX = (
   let q = y / (1000 * x + 997 * dx);
   let r = y - q * (1000 * x + 997 * dx); //r = y % (1000*amm.x + 997*x)
   return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
+};
+
+const howMuchToSpendToLevelAmms = (
+  t11: number,
+  t12: number,
+  t21: number,
+  t22: number
+): number => {
+  expect(t12 > 0 && t22 > 0)
+  let left = Math.sqrt(t11 * t22) * Math.sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
+  let right = t11 * t22;
+  if (right >= left) {
+    //We can't level these any more than they are
+    return 0;
+  }
+  return (1002 * (left - right)) / (1000 * t22);
 };
