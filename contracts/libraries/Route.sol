@@ -83,9 +83,9 @@ library Route {
             uint256[] memory splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
             for (uint256 k = 0; k < amms.length - j; ++k) {
                 uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[k], splits[k]);
-                xSellYGain[routeHelper.sortedIndices[k]] += splits[k];
-                amms[routeHelper.sortedIndices[k]].x += splits[k];
-                amms[routeHelper.sortedIndices[k]].y -= yGain;
+                xSellYGain[routeHelper.sortedIndices[amms.length - splits.length + k]] += splits[k];
+                amms[routeHelper.sortedIndices[amms.length - splits.length + k]].x += splits[k];
+                amms[routeHelper.sortedIndices[amms.length - splits.length + k]].y -= yGain;
             }
 
             if (routeHelper.hasXRunOut) {
