@@ -21,7 +21,7 @@ export default {
     hardhat: {
       //https://hardhat.org/hardhat-network/guides/mainnet-forking.html
       forking: {
-        url: "https://speedy-nodes-nyc.moralis.io/0786eddbee701c23817a1112/eth/mainnet/archive",
+        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
         blockNumber: 13482613,
       },
     },
