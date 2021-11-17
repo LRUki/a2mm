@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
+import "hardhat/console.sol";
 
 library Route {
     //functions below are only for testing purposes
@@ -35,19 +36,15 @@ library Route {
         }
 
         RouteHelper memory routeHelper = RouteHelper(
-        // Sort the AMMs - best to worst in exchange rate.
+        // Sort the AMMs - worst to best in exchange rate (for X).
             SharedFunctions.sortAmmArrayIndicesByExchangeRate(amms)
-        , Structs.Amm(amms[0].x, amms[0].y)
         , Structs.Amm(0, 0)
         , 0
         , new Structs.Amm[](amms.length)
-        , 1
         , false);
-        routeHelper.worstAmm = amms[routeHelper.sortedIndices[routeHelper.sortedIndices.length - 1]];
 
+        routeHelper.aggregatedPool = Structs.Amm(amms[routeHelper.sortedIndices[amms.length - 1]].x, amms[routeHelper.sortedIndices[amms.length - 1]].y);
         totalY = 0;
-
-        routeHelper.leveledAmms[0] = amms[routeHelper.sortedIndices[0]];
 
         shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
@@ -60,7 +57,6 @@ library Route {
             if (routeHelper.deltaX == 0) {
                 routeHelper.aggregatedPool.x += nextBestAmm.x;
                 routeHelper.aggregatedPool.y += nextBestAmm.y;
-                routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
                 continue;
             }
 
@@ -71,7 +67,7 @@ library Route {
                 amountOfX = 0;
                 shouldArbitrage = true;
                 uint256 deltaXWorst;
-                deltaXWorst = SharedFunctions.howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, routeHelper.worstAmm);
+                deltaXWorst = SharedFunctions.howMuchXToSpendToLevelAmms(routeHelper.aggregatedPool, amms[routeHelper.sortedIndices[0]]);
                 if (deltaXWorst == 0) {
                     shouldArbitrage = false;
                 }
@@ -80,8 +76,14 @@ library Route {
             totalY += SharedFunctions.quantityOfYForX(routeHelper.aggregatedPool, routeHelper.deltaX);
 
             //Otherwise, we just split our money across the leveled AMMs until the price reaches the next best AMM
+            //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
+            routeHelper.leveledAmms = new Structs.Amm[](amms.length - j);
+            for (uint256 k = 0; k < routeHelper.leveledAmms.length; ++k) {
+                routeHelper.leveledAmms[k] = amms[routeHelper.sortedIndices[amms.length - 1 - k]];
+            }
+
             uint256[] memory splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
-            for (uint256 k = 0; k < routeHelper.elemsAddedToLeveledAmmIndices; ++k) {
+            for (uint256 k = 0; k < amms.length - j; ++k) {
                 uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[k], splits[k]);
                 xSellYGain[routeHelper.sortedIndices[k]] += splits[k];
                 amms[routeHelper.sortedIndices[k]].x += splits[k];
@@ -92,8 +94,14 @@ library Route {
                 break;
             }
 
+            //We have to update the aggregated pool to reflect the changes made through the exchanges made above:
+            routeHelper.aggregatedPool = Structs.Amm(0, 0);
+            for (uint256 k = 0; k < amms.length - j; ++k) {
+                routeHelper.aggregatedPool.x += amms[routeHelper.sortedIndices[amms.length - 1 - k]].x;
+                routeHelper.aggregatedPool.y += amms[routeHelper.sortedIndices[amms.length - 1 - k]].y;
+            }
+
             amountOfX -= routeHelper.deltaX;
-            routeHelper.leveledAmms[routeHelper.elemsAddedToLeveledAmmIndices++] = amms[routeHelper.sortedIndices[i]];
         }
     }
 
@@ -106,7 +114,7 @@ library Route {
         Structs.Amm memory amm1,
         Structs.Amm memory amm2,
         uint256 deltaX
-    ) private view returns (uint256, uint256) {
+    ) private pure returns (uint256, uint256) {
         uint256 amm1Part = (deltaX * amm1.x) / (amm1.x + amm2.x);
         uint256 amm2Part = (deltaX * amm2.x) / (amm1.x + amm2.x);
         uint256 leftover = deltaX - amm1Part - amm2Part;
@@ -124,10 +132,8 @@ library Route {
     struct RouteHelper {
         uint256[] sortedIndices;
         Structs.Amm aggregatedPool;
-        Structs.Amm worstAmm;
         uint256 deltaX;
         Structs.Amm[] leveledAmms;
-        uint256 elemsAddedToLeveledAmmIndices;
         bool hasXRunOut;
     }
 }
