@@ -93,7 +93,6 @@ describe("==================================== Arbitrage =======================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true)
