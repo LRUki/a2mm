@@ -1,11 +1,11 @@
 import { ethers } from "hardhat";
 import { expect, assert } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
-import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 import {
   getBalanceOfERC20,
   topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
+
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
   before(async function () {

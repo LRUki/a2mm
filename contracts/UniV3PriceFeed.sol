@@ -3,7 +3,6 @@ pragma solidity 0.8.3;
 
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "./libraries/TokenAddrs.sol";
-import "hardhat/console.sol";
 
 contract UniV3PriceFeed {
   IQuoter public quoter = IQuoter(address(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6));
@@ -20,7 +19,6 @@ contract UniV3PriceFeed {
         amountIn,
         0
       );
-    console.log("amountOut=",amountOut);
     emit GetPrice(tokenIn.getAddr(), tokenOut.getAddr(), amountIn, amountOut);
     return amountOut;
   }
