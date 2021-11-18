@@ -17,7 +17,7 @@ library Arbitrage {
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
         }
-        return arbitrage(amms, amountOfYHeld);
+        return arbitrageForY(amms, amountOfYHeld);
     }
 
 
@@ -28,7 +28,7 @@ library Arbitrage {
     // @return amountsToSendToAmms - the calculated amounts of (x, y) pairs to send to the AMMs for arbitrage. \
     // Ordered in the same order as the argument.
     // @return flashLoanRequiredAmount - how large of a flash loan is required to complete the arbitrage
-    function arbitrage(Structs.Amm[] memory amms, uint256 amountOfYHeld) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
+    function arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 flashLoanRequiredAmount) {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
 
         ArbHelper memory arbHelper = ArbHelper(

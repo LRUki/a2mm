@@ -27,6 +27,7 @@ describe("==================================== Swap ============================
       libraries: {
         Arbitrage: this.arbitrage.address,
         Route: this.route.address,
+        SharedFunctions: sharedFunctionsAddress,
       },
     });
   });

@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./libraries/Structs.sol";
 import "./libraries/Arbitrage.sol";
 import "./libraries/Route.sol";
-import "./SharedFunctions.sol";
+import "./libraries/SharedFunctions.sol";
 import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -34,20 +34,48 @@ contract Swap is DexProvider {
         emit SwapEvent(amountIn, amountOut);
     }
 
-    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) pure external returns (uint256 totalOut) {
+
+    // @param tokenIn - the token which the user will provide/is wanting to sell
+    // @param tokenOut - the token which the user will be given/is wanting to buy
+    // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
+    // @return totalOut - the amount of token the user will get in return for amountIn of tokenIn
+    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) view external returns (uint256 totalOut) {
         Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
         Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            amms0[i] = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
-            amms1[i] = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+            (amms0[i].x, amms0[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+            (amms1[i].x, amms1[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
         }
 
         totalOut = 0;
-        (Structs.AmountsToSendToAmm[] memory route, uint256 flashLoanRequired) = swapXforY(amountIn, amms0);
-        for (uint256 i = 0; i < amms.length; i++) {
-            totalOut += quantityOfYForX(amms1[i], route[i].x);
+        (Structs.AmountsToSendToAmm[] memory route, uint256 flashLoanRequired) = swapXforY(amms0, amountIn);
+        for (uint256 i = 0; i < amms0.length; i++) {
+            totalOut += SharedFunctions.quantityOfYForX(amms1[i], route[i].x);
         }
         return totalOut - flashLoanRequired;
+    }
+
+
+    // @param arbitragingFor - the token which the user will provide/is wanting to arbitrage for
+    // @param intermediateToken - the token which the user is wanting to user during the arbitrage step \
+    // (arbitragingFor -> intermediateToken -> arbitragingFor)
+    // @return arbitrageGain - how much of token 'arbitragingFor' the user will gain for executing this arbitrage
+    // @return tokenInRequired - how much of 'arbitragingFor' the user would be required to own to complete the \
+    // arbitrage without a flash loan, using our arbitraging algorithm
+    function simulateArbitrage(address arbitragingFor, address intermediateToken) view external returns (uint256 arbitrageGain, uint256 tokenInRequired) {
+        Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            (amms0[i].x, amms0[i].y) = getReserves(_factoryAddresses[i], intermediateToken, arbitragingFor);
+            (amms1[i].x, amms1[i].y) = getReserves(_factoryAddresses[i], intermediateToken, arbitragingFor);
+        }
+
+        Structs.AmountsToSendToAmm[] memory arbitrages;
+        (arbitrages, tokenInRequired) = Arbitrage.arbitrageForY(amms0, 0);
+        arbitrageGain = 0;
+        for (uint256 i = 0; i < amms0.length; i++) {
+            arbitrageGain += SharedFunctions.quantityOfYForX(amms1[i], arbitrages[i].x);
+        }
     }
 
 
@@ -79,7 +107,7 @@ contract Swap is DexProvider {
         flashLoanRequiredAmount = 0;
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrages, flashLoanRequiredAmount) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
+            (arbitrages, flashLoanRequiredAmount) = Arbitrage.arbitrageForY(amms, totalYGainedFromRouting);
             for (uint256 i = 0; i < amms.length; i++) {
                 amountsToSendToAmms[i].x += arbitrages[i].x;
                 amountsToSendToAmms[i].y += arbitrages[i].y;
