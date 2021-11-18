@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
+import "hardhat/console.sol";
 
 library Route {
     //functions below are only for testing purposes
@@ -102,12 +103,14 @@ library Route {
             amountOfX -= routeHelper.deltaX;
         }
 
-        splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(amms, amountOfX);
-        for (uint256 k = 0; k < amms.length; ++k) {
-            uint256 yGain = SharedFunctions.quantityOfYForX(amms[k], splits[k]);
-            xSellYGain[k] += splits[k];
-            amms[k].x += splits[k];
-            amms[k].y -= yGain;
+        if (amountOfX != 0) {
+            splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(amms, amountOfX);
+            for (uint256 k = 0; k < amms.length; ++k) {
+                uint256 yGain = SharedFunctions.quantityOfYForX(amms[k], splits[k]);
+                xSellYGain[k] += splits[k];
+                amms[k].x += splits[k];
+                amms[k].y -= yGain;
+            }
         }
     }
 

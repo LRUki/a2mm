@@ -4,7 +4,6 @@ import { expect } from "chai";
 import whatPrecision from "./Arbitrage.test";
 
 const TEN_TO_18 = Math.pow(10, 18);
-// const TEN_TO_9 = Math.pow(10, 9);
 describe("==================================== Route ====================================", function () {
   before(async function () {
     const sharedFunctionAddress = await deployContract("SharedFunctions");
