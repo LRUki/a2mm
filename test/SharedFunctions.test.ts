@@ -2,7 +2,9 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "@ethersproject/bignumber";
 import deployContract from "../scripts/utils/deploy";
-const TEN_TO_18 = Math.pow(10, 18);
+import {TEN_TO_18, toStringMap, quantityOfYForX} from "./HelperFunctions";
+import assert from "assert";
+
 describe("==================================== SharedFunctions ====================================", function () {
   before(async function () {
     this.SharedFunctions = await ethers.getContractFactory("SharedFunctions");
@@ -43,18 +45,18 @@ describe("==================================== SharedFunctions =================
       BigInt(200 * TEN_TO_18),
       BigInt(200),
     );
-    const exp = quantityOfYForXTsx(
-      100 * TEN_TO_18,
-      200 * TEN_TO_18,
-      200
+    const exp = await quantityOfYForX(
+      BigInt(100 * TEN_TO_18),
+      BigInt(200 * TEN_TO_18),
+      BigInt(200)
     );
-    expect(Math.round((res-exp)/10).toString()).to.equal((0).toString());
+    expect(Number(res)).to.equal(Number(exp));
   });
 
   it("quantityOfYForX throws error if dx<=0 ", async function () {
     var throwsError = false;
     try {
-      const res = await quantityOfYForX(
+      await quantityOfYForX(
         BigInt(100 * TEN_TO_18),
         BigInt(200 * TEN_TO_18),
         BigInt(-200),
@@ -113,7 +115,7 @@ describe("==================================== SharedFunctions =================
       toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
       toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-    
+   
     const exp = howMuchToSpendToLevelAmms(100 * TEN_TO_18,200 * TEN_TO_18,100 * TEN_TO_18, 180 * TEN_TO_18)
 
     expect(Math.round((res-exp)/100000).toString()).to.equal((0).toString());
@@ -148,30 +150,13 @@ describe("==================================== SharedFunctions =================
   });
 });
 
-
-// helper functions for testing
-const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
-
-const quantityOfYForXTsx = (
-  x: number,
-  y: number,
-  dx: number
-): number => {
-  expect(x > 0 && y > 0)
-  if (dx == 0)
-    return 0
-  let q = y / (1000 * x + 997 * dx);
-  let r = y - q * (1000 * x + 997 * dx); //r = y % (1000*amm.x + 997*x)
-  return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
-};
-
 const howMuchToSpendToLevelAmms = (
   t11: number,
   t12: number,
   t21: number,
   t22: number
 ): number => {
-  expect(t12 > 0 && t22 > 0)
+  assert(t12 > 0 && t22 > 0)
   let left = Math.sqrt(t11 * t22) * Math.sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
   let right = t11 * t22;
   if (right >= left) {

@@ -1,29 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
-import assert from "assert";
-
-const TEN_TO_18 = Math.pow(10, 18);
-// helper functions for testing
-const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
-
-function whatPrecision(x: number, sf: number) {
-  assert(x != 0);
-  let xStr = x.toString();
-  if (xStr[0] == "0") {
-    let zerosAfterPoint = 0;
-    for (let i = 2; xStr[i] == "0"; ++i) {
-      zerosAfterPoint++;
-    }
-    return -zerosAfterPoint - sf;
-  }
-
-  let nonZerosBeforePoint = 0;
-  for (let i = 0; xStr[i] != "." && i < xStr.length; ++i) {
-    nonZerosBeforePoint++;
-  }
-  return nonZerosBeforePoint - sf;
-}
+import {TEN_TO_18, toStringMap, whatPrecision, calculateRatio} from "./HelperFunctions";
 
 describe("==================================== Arbitrage ====================================", function () {
   before(async function () {
@@ -36,39 +14,6 @@ describe("==================================== Arbitrage =======================
     this.arbitrage = await this.Arbitrage.deploy();
     await this.arbitrage.deployed();
   });
-
-  async function quantityOfYForX(x: bigint, y: bigint, dx: bigint) {
-    return Number(dx * BigInt(997) * y / (x * BigInt(1000) + dx * BigInt(997)));
-  }
-
-  async function quantityOfXForY(x: bigint, y: bigint, dy: bigint) {
-    return await quantityOfYForX(y, x, dy);
-  }
-
-  async function calculateRatio(
-    arrX: number,
-    arrY: number,
-    ammX: number,
-    ammY: number
-  ) {
-    let ratio;
-    if (ammX == 0) {
-      let xGain = await quantityOfXForY(
-        BigInt(arrX),
-        BigInt(arrY),
-        BigInt(ammY)
-      );
-      ratio = (arrY + ammY) / (arrX - xGain);
-    } else {
-      let yGain = await quantityOfYForX(
-        BigInt(arrX),
-        BigInt(arrY),
-        BigInt(ammX)
-      );
-      ratio = (arrY - yGain) / (arrX + ammX);
-    }
-    return ratio;
-  }
 
   it("Flash loan is required when we hold no Y", async function () {
     const amm = await this.arbitrage.arbitrageWrapper(
@@ -84,7 +29,6 @@ describe("==================================== Arbitrage =======================
   });
 
   it("Arbitrage fails when only one AMM supplied", async function () {
-    //TODO: how do we do this test? I want to make sure that it fails because only one AMM was passed
     var throwsError = false;
     try {
       await this.arbitrage.arbitrageWrapper(
