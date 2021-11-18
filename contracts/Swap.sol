@@ -64,11 +64,15 @@ contract Swap is DexProvider {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 amountOfYtoFlashLoan) {        
-        (uint256[] memory xToSendToAmmsFromRounting, uint256 totalYGainedFromRouting, bool shouldArbitrage) = Route.route(amms, amountOfX);
+    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 amountOfYtoFlashLoan) {
+        bool shouldArbitrage;
+
+        uint256 totalYGainedFromRouting;
+        uint256[] memory xToSendToAmmsFromRouting;
+        (xToSendToAmmsFromRouting, totalYGainedFromRouting, shouldArbitrage, amms) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
-            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(xToSendToAmmsFromRounting[i], 0);
+            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(xToSendToAmmsFromRouting[i], 0);
         }
 
         amountOfYtoFlashLoan = 0;
@@ -83,10 +87,17 @@ contract Swap is DexProvider {
     }
 
 
+    function calculateRouteAndArbitargeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint256 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return calculateRouteAndArbitarge(amms, amountOfX);
+    }
+
+
     //allow contract to recieve eth
     //not sure if we need it but might as well
-    receive() external payable {
-        console.log(msg.sender);
-        // _WETH.deposit{value:msg.value}();
-    }
+    //solhint-disable-next-line
+    receive() external payable {}
 }
