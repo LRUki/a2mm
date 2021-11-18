@@ -59,7 +59,7 @@ describe("==================================== Route ===========================
     expect(Math.round((amm[1]-exp)/(Math.pow(10,8))).toString()).to.equal((0).toString());
   });
 
-  it(" check that sum_{i in amms} (x_{i}^{new} - x_{i}^{old}) ~= x_{spent}", async function () {
+  it("check that the sum of amount to spend on different amms eguals to amount spent", async function () {
     let xToSpend = BigInt(6 * TEN_TO_18);
     const amm = await this.route.routeWrapper(
       [
