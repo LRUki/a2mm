@@ -85,14 +85,18 @@ describe("==================================== Arbitrage =======================
 
   it("Arbitrage fails when only one AMM supplied", async function () {
     //TODO: how do we do this test? I want to make sure that it fails because only one AMM was passed
+    var throwsError = false;
     try {
       await this.arbitrage.arbitrageWrapper(
         [toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18])],
         `${0.0031 * TEN_TO_18}`
       );
-    } catch (error) {
-      console.log(error);
     }
+    catch(error){
+      console.error(error);
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true)
   });
 
   it("Arbitrage runs when exactly two AMMs supplied (edge case)", async function () {
