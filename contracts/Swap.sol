@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./libraries/Structs.sol";
 import "./libraries/Arbitrage.sol";
 import "./libraries/Route.sol";
+import "./SharedFunctions.sol";
 import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -19,23 +20,34 @@ contract Swap is DexProvider {
     address payable constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address payable constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address payable[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNIV2_FACTORY_ADDRESS];
-    
+
     event SwapEvent(uint256 amountIn, uint256 amountOut);
-    // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
-
-
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
         Structs.AmountsToSendToAmm[] memory route = _mockAmountsToSendToAmms(amountIn);
         require(route[0].x + route[1].x == amountIn, "wrong route");
         uint256 amountOut = 0;
         for (uint256 i = 0; i < route.length; ++i) {
-	        amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
+            amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
         }
         require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
         emit SwapEvent(amountIn, amountOut);
+    }
+
+    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) pure external returns (uint256 totalOut) {
+        Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            amms0[i] = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+            amms1[i] = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+        }
+
+        totalOut = 0;
+        (Structs.AmountsToSendToAmm[] memory route, uint256 flashLoanRequired) = swapXforY(amountIn, amms0);
+        for (uint256 i = 0; i < amms.length; i++) {
+            totalOut += quantityOfYForX(amms1[i], route[i].x);
+        }
+        return totalOut - flashLoanRequired;
     }
 
 
