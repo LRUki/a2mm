@@ -25,7 +25,6 @@ describe("==================================== Route ===========================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -51,11 +50,6 @@ describe("==================================== Route ===========================
       `${0.4 * TEN_TO_18}`
     );
     const exp = 6649991662 * Math.pow(10, 8);
-    console.log("----------------------------------------")
-    console.log(amm[0][0].toString())
-    console.log(amm[0][1].toString())
-    console.log(amm[1].toString())
-    console.log("----------------------------------------")
     expect(Math.round((amm[1]-exp)/(Math.pow(10,8))).toString()).to.equal((0).toString());
   });
 
