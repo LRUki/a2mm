@@ -4,6 +4,7 @@ import { expect } from "chai";
 import whatPrecision from "./Arbitrage.test";
 
 const TEN_TO_18 = Math.pow(10, 18);
+// const TEN_TO_9 = Math.pow(10, 9);
 describe("==================================== Route ====================================", function () {
   before(async function () {
     const sharedFunctionAddress = await deployContract("SharedFunctions");
@@ -59,26 +60,24 @@ describe("==================================== Route ===========================
     expect(Math.round((amm[1]-exp)/(Math.pow(10,8))).toString()).to.equal((0).toString());
   });
 
-  // it(" check that sum_{i in amms} (x_{i}^{new} - x_{i}^{old}) ~= x_{spent}", async function () {
-    // const amm = await this.route.routeWrapper(
-    //   [
-    //     toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
-    //     toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
-    //     toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
-    //     toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
-    //   ],
-    //   `${4 * TEN_TO_18}`
-    // );
-    // var sum = BigInt(0);
-    // for (let i = 0; i < amm[0].length; i++) {
-    //     sum += BigInt(amm[0][i])
-    // }
-    // console.log(sum.toString());
-    // console.log(amm[0].toString());
-    
+  it(" check that sum_{i in amms} (x_{i}^{new} - x_{i}^{old}) ~= x_{spent}", async function () {
+    let xToSpend = BigInt(6 * TEN_TO_18);
+    const amm = await this.route.routeWrapper(
+      [
+        toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+        toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
+        toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
+        toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+      ],
+      `${xToSpend}`
+    );
+    var sum = BigInt(0);
+    for (let i = 0; i < amm[0].length; i++) {
+        sum += BigInt(amm[0][i])
+    }
 
-    //expect(sum.toString()).to.equal(amm[0].toString());
-  // });
+    expect(Math.abs(Number(sum) - Number(xToSpend))).to.lessThan(10);
+  });
 });
 
 // helper functions for testing

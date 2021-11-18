@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 
 import "./Structs.sol";
 import "./SharedFunctions.sol";
-import "hardhat/console.sol";
 
 library Route {
     //functions below are only for testing purposes
@@ -45,6 +44,7 @@ library Route {
 
         routeHelper.aggregatedPool = Structs.Amm(amms[routeHelper.sortedIndices[amms.length - 1]].x, amms[routeHelper.sortedIndices[amms.length - 1]].y);
         totalY = 0;
+        uint256[] memory splits;
 
         shouldArbitrage = false;
         // Send X to the best until we either run out of X to spend, or we level out this AMM with the next best AMM, whichever comes first.
@@ -80,7 +80,7 @@ library Route {
                 routeHelper.leveledAmms[k] = amms[routeHelper.sortedIndices[amms.length - 1 - k]];
             }
 
-            uint256[] memory splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
+            splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(routeHelper.leveledAmms, routeHelper.deltaX);
             for (uint256 k = 0; k < amms.length - j; ++k) {
                 uint256 yGain = SharedFunctions.quantityOfYForX(routeHelper.leveledAmms[k], splits[k]);
                 xSellYGain[routeHelper.sortedIndices[amms.length - splits.length + k]] += splits[k];
@@ -100,6 +100,14 @@ library Route {
             }
 
             amountOfX -= routeHelper.deltaX;
+        }
+
+        splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(amms, amountOfX);
+        for (uint256 k = 0; k < amms.length; ++k) {
+            uint256 yGain = SharedFunctions.quantityOfYForX(amms[k], splits[k]);
+            xSellYGain[k] += splits[k];
+            amms[k].x += splits[k];
+            amms[k].y -= yGain;
         }
     }
 
