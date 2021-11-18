@@ -150,8 +150,6 @@ describe("==================================== Swap ============================
         Number(amm[0][0].x),
         Number(amm[0][0].y)
     );
-
-    console.log(firstRatio);
     for (let i = 1; i < ammsArr.length; i++) {
       let ratio = await calculateRatio(
           Number(ammsArr[i][0]),
@@ -159,7 +157,6 @@ describe("==================================== Swap ============================
           Number(amm[0][i].x),
           Number(amm[0][i].y)
       );
-      console.log(ratio);
       expect(
           Math.abs(ratio - firstRatio)).to.lessThan(Math.pow(10, whatPrecision(firstRatio, 2)));
     }

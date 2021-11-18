@@ -58,7 +58,7 @@ contract Swap is DexProvider {
 
         uint256 totalYGainedFromRouting;
         uint256[] memory routings;
-        (routings, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
+        (routings, totalYGainedFromRouting, shouldArbitrage, amms) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routings[i], 0);
