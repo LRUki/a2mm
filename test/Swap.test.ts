@@ -6,6 +6,8 @@ import {
   topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
 
+import {TEN_TO_18, toStringMap} from "./HelperFunctions";
+
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
   before(async function () {
@@ -72,5 +74,9 @@ describe("==================================== Swap ============================
     const { amountOut } = swapEvent[0].args;
     const amountRecieved = await getBalanceOfERC20(signer.address, tokenOut);
     expect(amountRecieved.eq(amountOut)).to.be.true;
+  });
+
+  it("Swap Succeeds when only one AMM supplied", async function () {
+
   });
 });

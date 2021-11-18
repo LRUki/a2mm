@@ -1,9 +1,8 @@
 import deployContract from "../scripts/utils/deploy";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import whatPrecision from "./Arbitrage.test";
+import {TEN_TO_18, toStringMap} from "./HelperFunctions";
 
-const TEN_TO_18 = Math.pow(10, 18);
 describe("==================================== Route ====================================", function () {
   before(async function () {
     const sharedFunctionAddress = await deployContract("SharedFunctions");
@@ -72,6 +71,3 @@ describe("==================================== Route ===========================
     expect(Math.abs(Number(sum) - Number(xToSpend))).to.lessThan(10);
   });
 });
-
-// helper functions for testing
-const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);

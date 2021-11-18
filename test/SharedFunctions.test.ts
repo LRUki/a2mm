@@ -2,7 +2,8 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "@ethersproject/bignumber";
 import deployContract from "../scripts/utils/deploy";
-const TEN_TO_18 = Math.pow(10, 18);
+import {TEN_TO_18, toStringMap, quantityOfYForX} from "./HelperFunctions";
+
 describe("==================================== SharedFunctions ====================================", function () {
   before(async function () {
     this.SharedFunctions = await ethers.getContractFactory("SharedFunctions");
@@ -43,12 +44,12 @@ describe("==================================== SharedFunctions =================
       BigInt(200 * TEN_TO_18),
       BigInt(200),
     );
-    const exp = quantityOfYForXTsx(
-      100 * TEN_TO_18,
-      200 * TEN_TO_18,
-      200
+    const exp = await quantityOfYForX(
+      BigInt(100 * TEN_TO_18),
+      BigInt(200 * TEN_TO_18),
+      BigInt(200)
     );
-    expect(Math.round((res-exp)/10).toString()).to.equal((0).toString());
+    expect(Number(res)).to.equal(Number(exp));
   });
 
   it("quantityOfYForX throws error if dx<=0 ", async function () {
@@ -61,7 +62,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -77,7 +77,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -115,10 +114,8 @@ describe("==================================== SharedFunctions =================
       toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
       toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-    console.log(res.toString(), "x to approach the worse amm in Solidity");
-    
+
     const exp = howMuchToSpendToLevelAmms(100 * TEN_TO_18,200 * TEN_TO_18,100 * TEN_TO_18, 180 * TEN_TO_18)
-    console.log(exp.toString())
 
     expect(Math.round((res-exp)/100000).toString()).to.equal((0).toString());
   });
@@ -132,7 +129,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -152,23 +148,6 @@ describe("==================================== SharedFunctions =================
     expect(p1 / p3).to.equal(10);
   });
 });
-
-
-// helper functions for testing
-const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
-
-const quantityOfYForXTsx = (
-  x: number,
-  y: number,
-  dx: number
-): number => {
-  expect(x > 0 && y > 0)
-  if (dx == 0)
-    return 0
-  let q = y / (1000 * x + 997 * dx);
-  let r = y - q * (1000 * x + 997 * dx); //r = y % (1000*amm.x + 997*x)
-  return 1000 * dx * q + 1000 * dx * r / (1000 * x + 997 * dx);
-};
 
 const howMuchToSpendToLevelAmms = (
   t11: number,

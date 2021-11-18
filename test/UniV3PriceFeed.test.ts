@@ -32,10 +32,5 @@ describe("==================================== UniV3PriceFeed ==================
     expect(tokenOut).to.equal("0xdAC17F958D2ee523a2206206994597C13D831ec7");
     expect(amountIn.toString()).equal(ethAmount);
     expect(amountOut.toString()).equal("4069872621");
-    console.log(
-      `1ETH can be converted to ${amountOut.toString()} e${-tokenToDecimal[
-        Token.USDT
-      ]}`
-    );
   });
 });
