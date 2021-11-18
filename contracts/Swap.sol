@@ -76,6 +76,15 @@ contract Swap is DexProvider {
     }
 
 
+    function swapXforYWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint256 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return swapXforY(amms, amountOfX);
+    }
+
+
     //allow contract to recieve eth
     //not sure if we need it but might as well
     receive() external payable {

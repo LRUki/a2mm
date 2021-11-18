@@ -15,10 +15,10 @@ describe("==================================== Route ===========================
     await this.route.deployed();
   });
 
-  it("Routing with an empty array causes error", async function () {
+  it("Routing with no AMMs causes error", async function () {
     var throwsError = false;
     try {
-      const amm = await this.route.routeWrapper(
+      await this.route.routeWrapper(
         [],
         `${0.4 * TEN_TO_18}`
       );

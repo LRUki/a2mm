@@ -6,7 +6,7 @@ import {
   topUpWETHAndApproveContractToUse,
 } from "../scripts/utils/ERC20";
 
-import {TEN_TO_18, toStringMap} from "./HelperFunctions";
+import {calculateRatio, TEN_TO_18, TEN_TO_9, toStringMap, whatPrecision} from "./HelperFunctions";
 
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
@@ -76,7 +76,105 @@ describe("==================================== Swap ============================
     expect(amountRecieved.eq(amountOut)).to.be.true;
   });
 
-  it("Swap Succeeds when only one AMM supplied", async function () {
+  it("When only one AMM is supplied, everything is sent to that AMM", async function () {
+    let amountOfXToSend = 0.4 * TEN_TO_18;
+    const amm = await this.swap.swapXforYWrapper(
+        [
+          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+        ],
+        `${amountOfXToSend}`
+    );
+    expect(amm[1]).to.equal(0);
+    expect(amm[0][0].x).to.equal(BigInt(amountOfXToSend));
+    expect(amm[0][0].y).to.equal(BigInt(0));
+  });
 
+  it("No arbitrage opportunity - no flash loan required", async function () {
+    let ammsArr = [
+      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+      toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
+      toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
+      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+    ];
+    const amm = await this.swap.swapXforYWrapper(
+        ammsArr,
+        `${0.0031 * TEN_TO_18}`
+    );
+
+    expect(amm[1].toString()).to.equal("0");
+  });
+
+  it("Swapping lots of X means no flash loan required:", async function () {
+    const amm = await this.swap.swapXforYWrapper(
+        [
+          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+          toStringMap([2 * TEN_TO_18, 5 * TEN_TO_18]),
+          toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+        ],
+        `${100 * TEN_TO_18}`
+    );
+    expect(amm[1].toString()).to.equal("0");
+  });
+
+  it("Swapping with no AMMs causes error", async function () {
+    var throwsError = false;
+    try {
+      await this.swap.swapXforYWrapper(
+          [],
+          `${0.4 * TEN_TO_18}`
+      );
+    }
+    catch(error){
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true);
+  });
+
+  it("Ratios Y/X about equal after swapping done", async function () {
+    let ammsArr = [
+      toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+      toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+      toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
+      toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+    ];
+
+    const amm = await this.swap.swapXforYWrapper(
+        ammsArr,
+        `${0.31 * TEN_TO_18}`
+    );
+
+    //TODO: use of 'calculateRatio' possibly flawed here...
+    let firstRatio = await calculateRatio(
+        Number(ammsArr[0][0]),
+        Number(ammsArr[0][1]),
+        Number(amm[0][0].x),
+        Number(amm[0][0].y)
+    );
+
+    console.log(firstRatio);
+    for (let i = 1; i < ammsArr.length; i++) {
+      let ratio = await calculateRatio(
+          Number(ammsArr[i][0]),
+          Number(ammsArr[i][1]),
+          Number(amm[0][i].x),
+          Number(amm[0][i].y)
+      );
+      console.log(ratio);
+      expect(
+          Math.abs(ratio - firstRatio)).to.lessThan(Math.pow(10, whatPrecision(firstRatio, 2)));
+    }
+  });
+
+  it("Flash loan is required when we hold insufficient Y after routing", async function () {
+    const amm = await this.swap.swapXforYWrapper(
+        [
+          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+          toStringMap([5 * TEN_TO_18, 200 * TEN_TO_18]),
+          toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
+        ],
+        `${2 * TEN_TO_9}`
+    );
+    expect(amm[1].toString()).to.not.equal("0");
   });
 });

@@ -3,6 +3,7 @@ import { expect } from "chai";
 import { BigNumber } from "@ethersproject/bignumber";
 import deployContract from "../scripts/utils/deploy";
 import {TEN_TO_18, toStringMap, quantityOfYForX} from "./HelperFunctions";
+import assert from "assert";
 
 describe("==================================== SharedFunctions ====================================", function () {
   before(async function () {
@@ -55,7 +56,7 @@ describe("==================================== SharedFunctions =================
   it("quantityOfYForX throws error if dx<=0 ", async function () {
     var throwsError = false;
     try {
-      const res = await quantityOfYForX(
+      await quantityOfYForX(
         BigInt(100 * TEN_TO_18),
         BigInt(200 * TEN_TO_18),
         BigInt(-200),
@@ -155,7 +156,7 @@ const howMuchToSpendToLevelAmms = (
   t21: number,
   t22: number
 ): number => {
-  expect(t12 > 0 && t22 > 0)
+  assert(t12 > 0 && t22 > 0)
   let left = Math.sqrt(t11 * t22) * Math.sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
   let right = t11 * t22;
   if (right >= left) {
