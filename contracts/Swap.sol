@@ -58,7 +58,7 @@ contract Swap is DexProvider {
 
         uint256 totalYGainedFromRouting;
         uint256[] memory routings;
-        (routings, totalYGainedFromRouting, shouldArbitrage) = Route.route(amms, amountOfX);
+        (routings, totalYGainedFromRouting, shouldArbitrage, amms) = Route.route(amms, amountOfX);
         amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
         for (uint256 i = 0; i < amms.length; i++) {
             amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(routings[i], 0);
@@ -73,6 +73,15 @@ contract Swap is DexProvider {
                 amountsToSendToAmms[i].y += arbitrages[i].y;
             }
         }
+    }
+
+
+    function swapXforYWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint256 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return swapXforY(amms, amountOfX);
     }
 
 
