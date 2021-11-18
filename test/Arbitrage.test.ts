@@ -38,15 +38,7 @@ describe("==================================== Arbitrage =======================
   });
 
   async function quantityOfYForX(x: bigint, y: bigint, dx: bigint) {
-    //TODO: Is there a better way to do it?
-
-    await deployContract("SharedFunctions");
-    const SharedFunctions = await ethers.getContractFactory("SharedFunctions");
-    const sharedFunctions = await SharedFunctions.deploy();
-
-    return await sharedFunctions.functions[
-      "quantityOfYForX(uint256,uint256,uint256)"
-    ](x, y, dx);
+    return Number(dx * BigInt(997) * y / (x * BigInt(1000) + dx * BigInt(997)));
   }
 
   async function quantityOfXForY(x: bigint, y: bigint, dy: bigint) {
@@ -93,14 +85,17 @@ describe("==================================== Arbitrage =======================
 
   it("Arbitrage fails when only one AMM supplied", async function () {
     //TODO: how do we do this test? I want to make sure that it fails because only one AMM was passed
+    var throwsError = false;
     try {
       await this.arbitrage.arbitrageWrapper(
         [toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18])],
         `${0.0031 * TEN_TO_18}`
       );
-    } catch (error) {
-      console.log(error);
     }
+    catch(error){
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(true)
   });
 
   it("Arbitrage runs when exactly two AMMs supplied (edge case)", async function () {
@@ -198,3 +193,5 @@ describe("==================================== Arbitrage =======================
     expect(BigInt(amm[1]) + amountOfYHeld).to.equal(ySum);
   });
 });
+
+export default whatPrecision;

@@ -124,6 +124,15 @@ library SharedFunctions {
         return (1002 * (left - right)) / (1000 * t22);
     }
 
+    function sortAmmArrayIndicesByExchangeRateWrapper(
+        uint256[2][] memory ammsArray
+    ) public pure returns (uint256[] memory) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return sortAmmArrayIndicesByExchangeRate(amms);
+    }
 
     // @notice - uses insertion sort, as we don't expect to have a large list (I think Arthur mentioned only using 4-5 maximum)
     // @param amms - all of the AMMs we are considering (either for routing or arbitrage)
