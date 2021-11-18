@@ -61,7 +61,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -77,7 +76,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -115,10 +113,8 @@ describe("==================================== SharedFunctions =================
       toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
       toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-    console.log(res.toString(), "x to approach the worse amm in Solidity");
     
     const exp = howMuchToSpendToLevelAmms(100 * TEN_TO_18,200 * TEN_TO_18,100 * TEN_TO_18, 180 * TEN_TO_18)
-    console.log(exp.toString())
 
     expect(Math.round((res-exp)/100000).toString()).to.equal((0).toString());
   });
@@ -132,7 +128,6 @@ describe("==================================== SharedFunctions =================
       );
     }
     catch(error){
-      console.error(error);
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
