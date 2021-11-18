@@ -38,15 +38,7 @@ describe("==================================== Arbitrage =======================
   });
 
   async function quantityOfYForX(x: bigint, y: bigint, dx: bigint) {
-    //TODO: Is there a better way to do it?
-
-    await deployContract("SharedFunctions");
-    const SharedFunctions = await ethers.getContractFactory("SharedFunctions");
-    const sharedFunctions = await SharedFunctions.deploy();
-
-    return await sharedFunctions.functions[
-      "quantityOfYForX(uint256,uint256,uint256)"
-    ](x, y, dx);
+    return Number(dx * BigInt(997) * y / (x * BigInt(1000) + dx * BigInt(997)));
   }
 
   async function quantityOfXForY(x: bigint, y: bigint, dy: bigint) {
