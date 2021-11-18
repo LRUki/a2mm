@@ -115,7 +115,7 @@ describe("==================================== SharedFunctions =================
       toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
       toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
     );
-
+   
     const exp = howMuchToSpendToLevelAmms(100 * TEN_TO_18,200 * TEN_TO_18,100 * TEN_TO_18, 180 * TEN_TO_18)
 
     expect(Math.round((res-exp)/100000).toString()).to.equal((0).toString());
