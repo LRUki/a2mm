@@ -8,10 +8,11 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
 
 contract DexProvider {
         event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
-
+	address constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 	
 	function getReserves(address factoryAddress, address tokenA, address tokenB) public view returns (uint256 reserveA, uint256 reserveB) {
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenA, tokenB);
@@ -22,13 +23,12 @@ contract DexProvider {
  	}
 
 	//swaps tokenIn -> tokenOut
-	//assumes the sender already approved to spend thier tokenIn on behalf
+	//assumes the contract already recieved `amountIn` of tokenIn by the user 
 	//at the end of the execution, this address will be holding the tokenOut
     	function executeSwap(address factoryAddress, address tokenIn, address tokenOut, uint256 amountIn) public returns (uint256 amountOut){ 
 		address pairAddress = IUniswapV2Factory(factoryAddress).getPair(tokenIn, tokenOut);
 		require(pairAddress != address(0), "This pool does not exist");
        		(address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        	require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "user need to approve");
 	        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress).getReserves();
         	(uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn ? (reserve0, reserve1) : (reserve1, reserve0);
         	amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut); 

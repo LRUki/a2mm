@@ -29,7 +29,7 @@ export const topUpWETHAndApproveContractToUse = async (
 };
 
 //swap signer's ETH to WETH
-const convertEthToWETH = async (
+export const convertEthToWETH = async (
   signer: SignerWithAddress,
   amountOfEth: string
 ): Promise<void> => {
@@ -62,17 +62,34 @@ const approveOurContractToUseWETH = async (
   );
 };
 
+//send erc20 to eth
+export const sendERC20 = async (
+  signer: SignerWithAddress,
+  addressToSend: string,
+  ERC20TokenAddress: string,
+  amountOfERC20: string
+): Promise<void> => {
+  const abi = [
+    "function transfer(address to, uint value) external returns (bool)",
+  ];
+  const tokenContract = new ethers.Contract(ERC20TokenAddress, abi, signer);
+  await tokenContract.transfer(
+    addressToSend,
+    ethers.utils.parseEther(amountOfERC20)
+  );
+};
+
 //returns the balance of ERC20 token that address holds
 export const getBalanceOfERC20 = async (
   address: string,
-  erc20TokenAddress: string
+  ERC20TokenAddress: string
 ) => {
   const [signer] = await ethers.getSigners();
   const abi = [
     "function balanceOf(address owner) external view returns (uint)",
   ];
   const tokenContract = new ethers.Contract(
-    erc20TokenAddress,
+    ERC20TokenAddress,
     abi,
     signer.provider
   );

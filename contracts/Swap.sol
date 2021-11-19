@@ -13,41 +13,88 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol';
 import "hardhat/console.sol";
 
-contract Swap is DexProvider {
+contract Swap is DexProvider, IUniswapV2Callee {
     address constant private _SUSHI_FACTORY_ADDRESS = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address constant private _UNIV2_FACTORY_ADDRESS = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address[2] private _factoryAddresses = [_SUSHI_FACTORY_ADDRESS, _UNIV2_FACTORY_ADDRESS];
+    address[2] private _factoryAddresses = [_UNIV2_FACTORY_ADDRESS,_SUSHI_FACTORY_ADDRESS];
+    Structs.AmountsToSendToAmm[2] private amountsToSendToAmm;
     
     event SwapEvent(uint256 amountIn, uint256 amountOut);
-    // address private _wethTokenAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private _wethAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private _tokeAddress = 0x2e9d63788249371f1DFC918a52f8d799F4a38C94;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    // IWETH9 private _WETH = IWETH9(_wethTokenAddress);
+    // IWETH9 private _WETH = IWETH9(_wethAddress);
 
 
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "user need to approve");
+
         Structs.Amm[] memory amms = new Structs.Amm[](_factoryAddresses.length);
         for (uint256 i = 0; i < _factoryAddresses.length; ++i) {
             //TODO: check if tokenIN tokenOUt exists in the factory
             (amms[i].x, amms[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
         }
+        console.log(amms[0].x, amms[0].y ,"UNI RESERVE: WETH:TOKE");
         
-
-        (Structs.AmountsToSendToAmm[] memory amountsToSendToAmm, uint256 amountOfYtoFlashLoan) = calculateRouteAndArbitarge(amms, amountIn);
-        //TODO: flash loan `amountOfYtoFlashLoan`
-        uint256 amountOutY = 0;
-        uint256 amountOutX = 0;
-        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-            amountOutX += executeSwap(_factoryAddresses[i], tokenOut, tokenIn, amountsToSendToAmm[i].y);
-	        amountOutY += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x);
+        (Structs.AmountsToSendToAmm[] memory amountsToSendToAmmTemp, uint256 amountOfYtoFlashLoan) = calculateRouteAndArbitarge(amms, amountIn);
+        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i){
+            amountsToSendToAmm[i] = amountsToSendToAmmTemp[i];
         }
-
-        //TODO: remove flashloand from amountOutY? what about amountOfX? flash loan fee?
-        require(IERC20(tokenOut).transfer(msg.sender, amountOutY - amountOfYtoFlashLoan), "token failed to be sent back");
-        // emit SwapEvent(amountOutY - amountOfYtoFlashLoan);
+        uint256 xToLoan = 0;
+        uint256 yToLoan = 0;
+        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+            console.log(amountsToSendToAmm[i].x,"XXXX");
+            xToLoan += amountsToSendToAmmTemp[i].x;
+            yToLoan += amountsToSendToAmmTemp[i].y;
+        }
+        console.log(xToLoan,yToLoan,"TOLOAN"); 
+        console.log(amountIn,"AmountIN"); 
+        //handle integer division error
+        xToLoan = xToLoan > amountIn ? xToLoan - amountIn : 0;
+        uint256 amountOut = 0;
+        if (xToLoan > 0 || yToLoan > 0){
+            //TODO: how to get the amountOut from flashSwap?
+            console.log("FLASH"); 
+            flashSwap(tokenIn, tokenOut, xToLoan, yToLoan);     
+        }else {
+            console.log("NO FLASH"); 
+            for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+               require(amountsToSendToAmm[i].y == 0,"y should be 0");
+               if (amountsToSendToAmm[i].x > 0 ){
+                   amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x); 
+               }
+            } 
+        }
+        console.log(amountOut, IERC20(tokenOut).balanceOf(address(this)));
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
+        emit SwapEvent(amountIn, amountOut);
     }
+
+    function flashSwap(address tokenIn, address tokenOut, uint256 xToLoan, uint256 yToLoan) public {
+        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (xToLoan, yToLoan) : (yToLoan, xToLoan);
+        //if bytes == 2 we flipped the token order otherwise 1
+        address pairAddress = IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(tokenIn, tokenOut);
+        IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(token0 == tokenIn ? 1 : 2));	
+    }
+
+    function uniswapV2Call(address sender, uint amount0, uint amount1, bytes calldata data) external override {
+        //if length of bytes == 2, the tokenIn and tokenOut are reversed
+        IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
+        address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
+        address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
+  		assert(msg.sender == IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(tokenIn, tokenOut)); // ensure that msg.sender is a V2 pair
+        
+        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+           executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x); 
+           executeSwap(_factoryAddresses[i], tokenOut, tokenIn, amountsToSendToAmm[i].y); 
+        } 
+        //TODO:return back to the sender
+	}
 
 
     //returns mock routing for univ2 and sushi
