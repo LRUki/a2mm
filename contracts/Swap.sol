@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./libraries/Structs.sol";
 import "./libraries/Arbitrage.sol";
 import "./libraries/Route.sol";
+import "./libraries/SharedFunctions.sol";
 import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -27,8 +28,6 @@ contract Swap is DexProvider, IUniswapV2Callee {
     address private _tokeAddress = 0x2e9d63788249371f1DFC918a52f8d799F4a38C94;
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethAddress);
-
-
 
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
         require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "user need to approve");
@@ -69,8 +68,11 @@ contract Swap is DexProvider, IUniswapV2Callee {
                if (amountsToSendToAmm[i].x > 0 ){
                    amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x); 
                }
-            } 
+            }
         }
+//        for (uint256 i = 0; i < route.length; ++i) {
+//            amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
+//        }
         console.log(amountOut, IERC20(tokenOut).balanceOf(address(this)));
         require(IERC20(tokenOut).transfer(msg.sender, amountOut), "token failed to be sent back");
         emit SwapEvent(amountIn, amountOut);
@@ -116,6 +118,50 @@ contract Swap is DexProvider, IUniswapV2Callee {
 	}
 
 
+    // @param tokenIn - the token which the user will provide/is wanting to sell
+    // @param tokenOut - the token which the user will be given/is wanting to buy
+    // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
+    // @return totalOut - the amount of token the user will get in return for amountIn of tokenIn
+    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) view external returns (uint256 totalOut) {
+        Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            (amms0[i].x, amms0[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+            (amms1[i].x, amms1[i].y) = getReserves(_factoryAddresses[i], tokenIn, tokenOut);
+        }
+
+        totalOut = 0;
+        (uint256[] memory routes, Structs.AmountsToSendToAmm[] memory arbitrages, uint256 flashLoanRequired) = calculateRouteAndArbitarge(amms0, amountIn);
+        for (uint256 i = 0; i < amms0.length; i++) {
+            totalOut += SharedFunctions.quantityOfYForX(amms1[i], routes[i] + arbitrages[i].x);
+        }
+        return totalOut - flashLoanRequired;
+    }
+
+
+    // @param arbitragingFor - the token which the user will provide/is wanting to arbitrage for
+    // @param intermediateToken - the token which the user is wanting to user during the arbitrage step \
+    // (arbitragingFor -> intermediateToken -> arbitragingFor)
+    // @return arbitrageGain - how much of token 'arbitragingFor' the user will gain for executing this arbitrage
+    // @return tokenInRequired - how much of 'arbitragingFor' the user would be required to own to complete the \
+    // arbitrage without a flash loan, using our arbitraging algorithm
+    function simulateArbitrage(address arbitragingFor, address intermediateToken) view external returns (uint256 arbitrageGain, uint256 tokenInRequired) {
+        Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            (amms0[i].x, amms0[i].y) = getReserves(_factoryAddresses[i], intermediateToken, arbitragingFor);
+            (amms1[i].x, amms1[i].y) = getReserves(_factoryAddresses[i], intermediateToken, arbitragingFor);
+        }
+
+        Structs.AmountsToSendToAmm[] memory arbitrages;
+        (arbitrages, tokenInRequired) = Arbitrage.arbitrageForY(amms0, 0);
+        arbitrageGain = 0;
+        for (uint256 i = 0; i < amms0.length; i++) {
+            arbitrageGain += SharedFunctions.quantityOfYForX(amms1[i], arbitrages[i].x);
+        }
+    }
+
+
     //returns mock routing for univ2 and sushi
     function _mockAmountsToSendToAmms(uint256 amountIn) private pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms) {
         uint256 amountToSendToUniV2 = amountIn / 2;
@@ -141,7 +187,7 @@ contract Swap is DexProvider, IUniswapV2Callee {
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
+            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage.arbitrageForY(amms, totalYGainedFromRouting);
         }
     }
 
