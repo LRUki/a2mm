@@ -115,6 +115,22 @@ contract Swap is DexProvider, IUniswapV2Callee {
         //4 return tokenOutAmount of y + fee to Uniswap
         //keep the ySum - (tokenOutAmount of y + fee) 
         //TODO:return back to the sender
+
+        //------------------------------------- UPDATE FROM MIHEY: ---------------------------------------
+        /*
+         - the 'data' argument here is going to have to include the 'routingAmountsToSendToAmms' and
+        'arbitrageAmountsToSendToAmms' return values from 'calculateRouteAndArbitarge()'.
+        - 'tokenIn' will be set to zero;
+        - 'tokenOut' will be set to 'amountOfYtoFlashLoan' (return value from 'calculateRouteAndArbitarge()'). Note
+            that if this is zero, then we shouldn't reach the flash swap case.
+        - Then, the steps we take are:
+            - exchange X->Y using 'routingAmountsToSendToAmms';
+            - exchange Y->X using the '.y' members of 'arbitrageAmountsToSendToAmms';
+            - exchange X->Y using the '.x' members of 'arbitrageAmountsToSendToAmms', keeping track of how much Y
+                we get from this (sum it all up, and call it 'ySum');
+            - return the flash loan (we'll have to calculate it - call it 'returnLoan')
+            - give the user 'ySum - returnLoan' amount of Y.
+        */
 	}
 
 
