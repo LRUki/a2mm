@@ -40,16 +40,18 @@ contract Swap is DexProvider, IUniswapV2Callee {
         }
         console.log(amms[0].x, amms[0].y ,"UNI RESERVE: WETH:TOKE");
         
-        (Structs.AmountsToSendToAmm[] memory amountsToSendToAmmTemp, uint256 amountOfYtoFlashLoan) = calculateRouteAndArbitarge(amms, amountIn);
+        (uint256[] memory routingAmountsToSendToAmmsTemp, Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmmsTemp, uint256 amountOfYtoFlashLoan) = calculateRouteAndArbitarge(amms, amountIn);
+        console.log(amountOfYtoFlashLoan, "<- loan amount");
         for (uint256 i = 0; i < amountsToSendToAmm.length; ++i){
-            amountsToSendToAmm[i] = amountsToSendToAmmTemp[i];
+            amountsToSendToAmm[i].x = arbitrageAmountsToSendToAmmsTemp[i].x + routingAmountsToSendToAmmsTemp[i];
+            amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmmsTemp[i].y;
         }
         uint256 xToLoan = 0;
         uint256 yToLoan = 0;
         for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
             console.log(amountsToSendToAmm[i].x,"XXXX");
-            xToLoan += amountsToSendToAmmTemp[i].x;
-            yToLoan += amountsToSendToAmmTemp[i].y;
+            xToLoan += arbitrageAmountsToSendToAmmsTemp[i].x + routingAmountsToSendToAmmsTemp[i];
+            yToLoan += arbitrageAmountsToSendToAmmsTemp[i].y;
         }
         console.log(xToLoan,yToLoan,"TOLOAN"); 
         console.log(amountIn,"AmountIN"); 
@@ -111,30 +113,23 @@ contract Swap is DexProvider, IUniswapV2Callee {
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
-    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms, uint256 amountOfYtoFlashLoan) {
+    function calculateRouteAndArbitarge(Structs.Amm[] memory amms, uint256 amountOfX) public pure returns (uint256[] memory routingAmountsToSendToAmms, Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms, uint256 amountOfYtoFlashLoan) {
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
-        uint256[] memory xToSendToAmmsFromRouting;
-        (xToSendToAmmsFromRouting, totalYGainedFromRouting, shouldArbitrage, amms) = Route.route(amms, amountOfX);
-        amountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
-        for (uint256 i = 0; i < amms.length; i++) {
-            amountsToSendToAmms[i] = Structs.AmountsToSendToAmm(xToSendToAmmsFromRouting[i], 0);
-        }
+        (routingAmountsToSendToAmms, totalYGainedFromRouting, shouldArbitrage, amms) = Route.route(amms, amountOfX);
 
         amountOfYtoFlashLoan = 0;
+        arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](1);
+        arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrages, amountOfYtoFlashLoan) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
-            for (uint256 i = 0; i < amms.length; i++) {
-                amountsToSendToAmms[i].x += arbitrages[i].x;
-                amountsToSendToAmms[i].y += arbitrages[i].y;
-            }
+            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage.arbitrage(amms, totalYGainedFromRouting);
         }
     }
 
 
-    function calculateRouteAndArbitargeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+    function calculateRouteAndArbitargeWrapper(uint256[2][] memory ammsArray, uint256 amountOfX) public pure returns (uint256[] memory, Structs.AmountsToSendToAmm[] memory, uint256) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);

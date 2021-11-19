@@ -61,9 +61,9 @@ describe("==================================== Swap ============================
 
   it("swaps on differnt route", async function () {
     const [signer] = await ethers.getSigners();
-    const ethAmout = "10";
+    const ethAmout = "1";
     const tokenIn = tokenToAddress[Token.WETH];
-    const tokenOut = tokenToAddress[Token.USDT];
+    const tokenOut = tokenToAddress[Token.UNI];
 
     //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
     await topUpWETHAndApproveContractToUse(signer, ethAmout, this.swap.address);
@@ -89,9 +89,10 @@ describe("==================================== Swap ============================
       [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
       `${amountOfXToSend}`
     );
-    expect(amm[1]).to.equal(0);
-    expect(amm[0][0].x).to.equal(BigInt(amountOfXToSend));
-    expect(amm[0][0].y).to.equal(BigInt(0));
+    expect(amm[2]).to.equal(0);
+    expect(amm[0][0]).to.equal(BigInt(amountOfXToSend));
+    expect(amm[1][0].x).to.equal(0);
+    expect(amm[1][0].y).to.equal(0);
   });
 
   it("No arbitrage opportunity - no flash loan required", async function () {
@@ -106,7 +107,7 @@ describe("==================================== Swap ============================
       `${0.0031 * TEN_TO_18}`
     );
 
-    expect(amm[1].toString()).to.equal("0");
+    expect(amm[2].toString()).to.equal("0");
   });
 
   it("Swapping lots of X means no flash loan required:", async function () {
@@ -118,7 +119,7 @@ describe("==================================== Swap ============================
       ],
       `${100 * TEN_TO_18}`
     );
-    expect(amm[1].toString()).to.equal("0");
+    expect(amm[2].toString()).to.equal("0");
   });
 
   it("Swapping with no AMMs causes error", async function () {
@@ -144,22 +145,21 @@ describe("==================================== Swap ============================
 
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
       ammsArr,
-      `${0.31 * TEN_TO_18}`
+      `${0.0031 * TEN_TO_18}`
     );
 
-    //TODO: use of 'calculateRatio' possibly flawed here...
     let firstRatio = await calculateRatio(
       Number(ammsArr[0][0]),
       Number(ammsArr[0][1]),
-      Number(amm[0][0].x),
-      Number(amm[0][0].y)
+      Number(BigInt(amm[0][0]) + BigInt(amm[1][0].x)),
+      Number(amm[1][0].y)
     );
     for (let i = 1; i < ammsArr.length; i++) {
       let ratio = await calculateRatio(
         Number(ammsArr[i][0]),
         Number(ammsArr[i][1]),
-        Number(amm[0][i].x),
-        Number(amm[0][i].y)
+        Number(BigInt(amm[0][i]) + BigInt(amm[1][i].x)),
+        Number(amm[1][i].y)
       );
       expect(Math.abs(ratio - firstRatio)).to.lessThan(
         Math.pow(10, whatPrecision(firstRatio, 2))
@@ -177,6 +177,6 @@ describe("==================================== Swap ============================
       ],
       `${2 * TEN_TO_9}`
     );
-    expect(amm[1].toString()).to.not.equal("0");
+    expect(amm[2].toString()).to.not.equal("0");
   });
 });
