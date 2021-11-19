@@ -77,8 +77,8 @@ contract Swap is DexProvider, IUniswapV2Callee {
     function flashSwap(address tokenIn, address tokenOut, uint256 xToLoan, uint256 yToLoan) public {
         (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn ? (xToLoan, yToLoan) : (yToLoan, xToLoan);
-        //if bytes == 2 we flipped the token order otherwise 1
         address pairAddress = IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(tokenIn, tokenOut);
+        //if bytes == 2 we flipped the token order otherwise 1
         IUniswapV2Pair(pairAddress).swap(amount0Out, amount1Out, address(this), new bytes(token0 == tokenIn ? 1 : 2));	
     }
 
@@ -88,11 +88,28 @@ contract Swap is DexProvider, IUniswapV2Callee {
         address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
         address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
   		assert(msg.sender == IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(tokenIn, tokenOut)); // ensure that msg.sender is a V2 pair
-        
-        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-           executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x); 
-           executeSwap(_factoryAddresses[i], tokenOut, tokenIn, amountsToSendToAmm[i].y); 
-        } 
+        //TODO: sort tokenInAmount, tokenOutAmount
+        //1. tokenInAmount = sum of xs in amountsToSendToAmm - userAmountIn, tokenOutAmount = 0 
+        //1. tokenInAmount = 0 , tokenOutAmount = sum of ys in amountsToSendToAmm
+
+        //2. convert ys to xs and keep track of x we get
+        //xSum = 0
+        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+        //    xSum += executeSwap(_factoryAddresses[i], tokenOut,tokenIn, amountsToSendToAmm[i].y); 
+        // }
+
+        //require(xSum + userAmountIn == sum(amountsToSendToAmm.x)) ????
+
+        //3. convert tokenIn(x) to tokenOut(y) and keep track of tokenOut we get
+        //ySum = 0
+        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+        //    ySum += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x); 
+        // } 
+
+
+
+        //4 return tokenOutAmount of y + fee to Uniswap
+        //keep the ySum - (tokenOutAmount of y + fee) 
         //TODO:return back to the sender
 	}
 
