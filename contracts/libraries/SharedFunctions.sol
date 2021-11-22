@@ -44,14 +44,22 @@ library SharedFunctions {
     // @param x - the amount of X in the AMM we are looking to trade at
     // @param y - the amount of Y in the AMM we are looking to trade at
     // @param dx - how much of X we are willing to potentially spend
-    // @return amountOut - how much of Y we would get if we traded x of X for Y
+    // @return amountOut - how much of Y we would get if we traded dx of X for Y
     function quantityOfYForX(uint256 x, uint256 y, uint256 dx) public pure returns (uint256 amountOut) {
-        require(dx > 0, "Insuficcient 'dx'");
-        require(x > 0 && y > 0, "Insufficient liquidity: x or y");
+        require(dx > 0, "Insufficient funds: dx");
+        require(y > 0, "Insufficient liquidity: y");
+        if (dx == 0) {
+            return 0;
+        }
         uint amountInWithFee = dx * 997;
         uint numerator = amountInWithFee * y;
         uint denominator = x * 1000 + amountInWithFee;
         amountOut = numerator / denominator;
+    }
+
+
+    function quantityOfXForY(uint256 x, uint256 y, uint256 dy) public pure returns (uint256){
+        return quantityOfYForX(y, x, dy);
     }
 
 
@@ -65,25 +73,12 @@ library SharedFunctions {
     }
 
 
-    // @param amm - the AMM we are considering to trade at
-    // @return - amount of Y we would get for unit X
-    function exchangeRateForY(Structs.Amm memory amm) public pure returns (uint256){
-        return quantityOfYForX(amm, 1);
-    }
-
-
-    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256 delta) {
-        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
-        delta = (1002 * (sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21) - t11 * t22)) / (1000 * t22);
-    }
-
-
     //(Appendix B, formula 17)
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for Y; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for Y, i.e. Y/X is lower here than on betterAmm
     // @return deltaX - the amount of X we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaX) {
+    function howMuchXToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
@@ -106,8 +101,8 @@ library SharedFunctions {
     // @notice - has potential overflow/underflow issues
     // @param betterAmm - the AMM which has a better price for X; can represent an aggregation of multiple AMMs' liquidity pools.
     // @param worseAmm - the AMM which as a the worse price for X, i.e. X/Y is lower here than on betterAmm
-    // @return deltaY - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
-    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256 deltaY) {
+    // @return - the amount of Y we would need to spend on betterAmm until it levels with worseAmm
+    function howMuchYToSpendToLevelAmms(Structs.Amm memory betterAmm, Structs.Amm memory worseAmm) public pure returns (uint256) {
         uint256 x1 = betterAmm.x;
         uint256 x2 = worseAmm.x;
         uint256 y1 = betterAmm.y;
@@ -116,6 +111,28 @@ library SharedFunctions {
         return _howMuchToSpendToLevelAmms(y1, y2, x1, x2);
     }
 
+
+    function _howMuchToSpendToLevelAmms(uint256 t11, uint256 t12, uint256 t21, uint256 t22) private pure returns (uint256) {
+        //TODO: this formula is inexact. Making it exact might have a higher gas fee, so might be worth investigating if the higher potential profit covers the potentially higher gas fee
+        require(t12 > 0 && t22 > 0, "Liquidity must be more than 0.");
+        uint256 left = sqrt(t11 * t22) * sqrt((t11 * t22 * 2257) / 1_000_000_000 + t12 * t21);
+        uint256 right = t11 * t22;
+        if (right >= left) {
+            //We can't level these any more than they are
+            return 0;
+        }
+        return (1002 * (left - right)) / (1000 * t22);
+    }
+
+    function sortAmmArrayIndicesByExchangeRateWrapper(
+        uint256[2][] memory ammsArray
+    ) public pure returns (uint256[] memory) {
+        Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
+        for (uint8 i = 0; i < ammsArray.length; ++i) {
+            amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
+        }
+        return sortAmmArrayIndicesByExchangeRate(amms);
+    }
 
     // @notice - uses insertion sort, as we don't expect to have a large list (I think Arthur mentioned only using 4-5 maximum)
     // @param amms - all of the AMMs we are considering (either for routing or arbitrage)
@@ -130,7 +147,7 @@ library SharedFunctions {
         for (uint256 i = 1; i < n; ++i) {
             uint256 tmp = indices[i];
             uint256 j = i;
-            while (j > 0 && exchangeRateForY(amms[tmp]) < exchangeRateForY(amms[indices[j - 1]])) {
+            while (j > 0 && amms[tmp].y * amms[indices[j - 1]].x < amms[indices[j - 1]].y * amms[tmp].x) {
                 indices[j] = indices[j - 1];
                 --j;
             }

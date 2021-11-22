@@ -4,7 +4,7 @@
   "description": "core smart contract",
   "scripts": {
     "test": "npx hardhat test",
-    "deploy-swap": "npx hardhat run --network localhost scripts/Swap.ts",
+    "deploy": "npx hardhat run --network $npm_config_network scripts/deploy.ts",
     "solhint": "solhint contracts/**/*.sol"
   },
   "keywords": [],
