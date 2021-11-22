@@ -18,7 +18,7 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    Structs.AmountsToSendToAmm[2] private amountsToSendToAmm;
+    Structs.AmountsToSendToAmm[2] private _amountsToSendToAmm;
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
     address private _wethAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -55,16 +55,16 @@ contract Swap is DexProvider {
             uint256 amountOfYtoFlashLoan
         ) = calculateRouteAndArbitarge(amms, amountIn);
         console.log(amountOfYtoFlashLoan, "<- loan amount");
-        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-            amountsToSendToAmm[i].x =
+        for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
+            _amountsToSendToAmm[i].x =
                 arbitrageAmountsToSendToAmmsTemp[i].x +
                 routingAmountsToSendToAmmsTemp[i];
-            amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmmsTemp[i].y;
+            _amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmmsTemp[i].y;
         }
         uint256 xToLoan = 0;
         uint256 yToLoan = 0;
-        for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-            console.log(amountsToSendToAmm[i].x, "XXXX");
+        for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
+            console.log(_amountsToSendToAmm[i].x, "XXXX");
             xToLoan +=
                 arbitrageAmountsToSendToAmmsTemp[i].x +
                 routingAmountsToSendToAmmsTemp[i];
@@ -81,14 +81,14 @@ contract Swap is DexProvider {
             flashSwap(tokenIn, tokenOut, xToLoan, yToLoan);
         } else {
             console.log("NO FLASH");
-            for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-                require(amountsToSendToAmm[i].y == 0, "y should be 0");
-                if (amountsToSendToAmm[i].x > 0) {
+            for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
+                require(_amountsToSendToAmm[i].y == 0, "y should be 0");
+                if (_amountsToSendToAmm[i].x > 0) {
                     amountOut += executeSwap(
                         _factoryAddresses[i],
                         tokenIn,
                         tokenOut,
-                        amountsToSendToAmm[i].x
+                        _amountsToSendToAmm[i].x
                     );
                 }
             }
@@ -236,6 +236,7 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](1);
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
+            //solhint-disable-next-line
             Structs.AmountsToSendToAmm[] memory arbitrages;
             (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage
                 .arbitrageForY(amms, totalYGainedFromRouting);
