@@ -39,7 +39,7 @@ contract Swap is DexProvider {
     // @param tokenOut - the token which the user will be given/is wanting to buy
     // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
     // @return totalOut - the amount of token the user will get in return for amountIn of tokenIn
-    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) view external returns (uint256 totalOut) {
+    function simulateSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256 totalOut) {
         Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
         Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
@@ -62,7 +62,7 @@ contract Swap is DexProvider {
     // @return arbitrageGain - how much of token 'arbitragingFor' the user will gain for executing this arbitrage
     // @return tokenInRequired - how much of 'arbitragingFor' the user would be required to own to complete the \
     // arbitrage without a flash loan, using our arbitraging algorithm
-    function simulateArbitrage(address arbitragingFor, address intermediateToken) view external returns (uint256 arbitrageGain, uint256 tokenInRequired) {
+    function simulateArbitrage(address arbitragingFor, address intermediateToken) external view returns (uint256 arbitrageGain, uint256 tokenInRequired) {
         Structs.Amm[] memory amms0 = new Structs.Amm[](_factoryAddresses.length);
         Structs.Amm[] memory amms1 = new Structs.Amm[](_factoryAddresses.length);
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
