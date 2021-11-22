@@ -11,131 +11,131 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
 
 contract DexProvider is IUniswapV2Callee {
-    event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
-    address private constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+  event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
+  address internal constant _UNIV2_FACTORY_ADDRESS =
+    0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+  address internal constant _SUSHI_FACTORY_ADDRESS =
+    0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
 
-    function getReserves(
-        address factoryAddress,
-        address tokenA,
-        address tokenB
-    ) public view returns (uint256 reserveA, uint256 reserveB) {
-        address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
-            tokenA,
-            tokenB
-        );
-        require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
-        (reserveA, reserveB) = tokenA == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
-    }
+  address[2] internal _factoryAddresses = [
+    _UNIV2_FACTORY_ADDRESS,
+    _SUSHI_FACTORY_ADDRESS
+  ];
 
-    //swaps tokenIn -> tokenOut
-    //assumes the contract already recieved `amountIn` of tokenIn by the user
-    //at the end of the execution, this address will be holding the tokenOut
-    function executeSwap(
-        address factoryAddress,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn
-    ) public returns (uint256 amountOut) {
-        address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
-            tokenIn,
-            tokenOut
-        );
-        require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
-        (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
-        amountOut = UniswapV2Library.getAmountOut(
-            amountIn,
-            reserveIn,
-            reserveOut
-        );
-        IERC20(tokenIn).transfer(pairAddress, amountIn);
-        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), amountOut)
-            : (amountOut, uint256(0));
-        IUniswapV2Pair(pairAddress).swap(
-            amount0Out,
-            amount1Out,
-            address(this),
-            new bytes(0)
-        );
-        emit ExecuteSwapEvent(amountIn, amountOut);
-        return amountOut;
-    }
+  function getReserves(
+    address factoryAddress,
+    address tokenA,
+    address tokenB
+  ) public view returns (uint256 reserveA, uint256 reserveB) {
+    address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
+      tokenA,
+      tokenB
+    );
+    require(pairAddress != address(0), "This pool does not exist");
+    (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
+    (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+      .getReserves();
+    (reserveA, reserveB) = tokenA == token0
+      ? (reserve0, reserve1)
+      : (reserve1, reserve0);
+  }
 
-    function flashSwap(
-        address tokenIn,
-        address tokenOut,
-        uint256 xToLoan,
-        uint256 yToLoan
-    ) public {
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (xToLoan, yToLoan)
-            : (yToLoan, xToLoan);
-        address pairAddress = IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
-            tokenIn,
-            tokenOut
-        );
-        //if bytes == 2 we flipped the token order otherwise 1
-        IUniswapV2Pair(pairAddress).swap(
-            amount0Out,
-            amount1Out,
-            address(this),
-            new bytes(token0 == tokenIn ? 1 : 2)
-        );
-    }
+  //swaps tokenIn -> tokenOut
+  //assumes the contract already recieved `amountIn` of tokenIn by the user
+  //at the end of the execution, this address will be holding the tokenOut
+  function executeSwap(
+    address factoryAddress,
+    address tokenIn,
+    address tokenOut,
+    uint256 amountIn
+  ) public returns (uint256 amountOut) {
+    address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
+      tokenIn,
+      tokenOut
+    );
+    require(pairAddress != address(0), "This pool does not exist");
+    (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+    (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+      .getReserves();
+    (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
+      ? (reserve0, reserve1)
+      : (reserve1, reserve0);
+    amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut);
+    IERC20(tokenIn).transfer(pairAddress, amountIn);
+    (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
+      ? (uint256(0), amountOut)
+      : (amountOut, uint256(0));
+    IUniswapV2Pair(pairAddress).swap(
+      amount0Out,
+      amount1Out,
+      address(this),
+      new bytes(0)
+    );
+    emit ExecuteSwapEvent(amountIn, amountOut);
+    return amountOut;
+  }
 
-    function uniswapV2Call(
-        address sender,
-        uint256 amount0,
-        uint256 amount1,
-        bytes calldata data
-    ) external override {
-        //if length of bytes == 2, the tokenIn and tokenOut are reversed
-        IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
-        address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
-        address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
-        assert(
-            msg.sender ==
-                IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
-                    tokenIn,
-                    tokenOut
-                )
-        ); // ensure that msg.sender is a V2 pair
-        //TODO: sort tokenInAmount, tokenOutAmount
-        //1. tokenInAmount = sum of xs in amountsToSendToAmm - userAmountIn, tokenOutAmount = 0
-        //1. tokenInAmount = 0 , tokenOutAmount = sum of ys in amountsToSendToAmm
+  function flashSwap(
+    address tokenIn,
+    address tokenOut,
+    uint256 xToLoan,
+    uint256 yToLoan
+  ) public {
+    (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+    (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
+      ? (xToLoan, yToLoan)
+      : (yToLoan, xToLoan);
+    address pairAddress = IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
+      tokenIn,
+      tokenOut
+    );
+    //if bytes == 2 we flipped the token order otherwise 1
+    IUniswapV2Pair(pairAddress).swap(
+      amount0Out,
+      amount1Out,
+      address(this),
+      new bytes(token0 == tokenIn ? 1 : 2)
+    );
+  }
 
-        //2. convert ys to xs and keep track of x we get
-        //xSum = 0
-        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-        //    xSum += executeSwap(_factoryAddresses[i], tokenOut,tokenIn, amountsToSendToAmm[i].y);
-        // }
+  function uniswapV2Call(
+    address sender,
+    uint256 amount0,
+    uint256 amount1,
+    bytes calldata data
+  ) external override {
+    //if length of bytes == 2, the tokenIn and tokenOut are reversed
+    IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
+    address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
+    address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
+    assert(
+      msg.sender ==
+        IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(tokenIn, tokenOut)
+    ); // ensure that msg.sender is a V2 pair
+    //TODO: sort tokenInAmount, tokenOutAmount
+    //1. tokenInAmount = sum of xs in amountsToSendToAmm - userAmountIn, tokenOutAmount = 0
+    //1. tokenInAmount = 0 , tokenOutAmount = sum of ys in amountsToSendToAmm
 
-        //require(xSum + userAmountIn == sum(amountsToSendToAmm.x)) ????
+    //2. convert ys to xs and keep track of x we get
+    //xSum = 0
+    // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+    //    xSum += executeSwap(_factoryAddresses[i], tokenOut,tokenIn, amountsToSendToAmm[i].y);
+    // }
 
-        //3. convert tokenIn(x) to tokenOut(y) and keep track of tokenOut we get
-        //ySum = 0
-        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-        //    ySum += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x);
-        // }
+    //require(xSum + userAmountIn == sum(amountsToSendToAmm.x)) ????
 
-        //4 return tokenOutAmount of y + fee to Uniswap
-        //keep the ySum - (tokenOutAmount of y + fee)
-        //TODO:return back to the sender
+    //3. convert tokenIn(x) to tokenOut(y) and keep track of tokenOut we get
+    //ySum = 0
+    // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
+    //    ySum += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x);
+    // }
 
-        //------------------------------------- UPDATE FROM MIHEY: ---------------------------------------
-        /*
+    //4 return tokenOutAmount of y + fee to Uniswap
+    //keep the ySum - (tokenOutAmount of y + fee)
+    //TODO:return back to the sender
+
+    //------------------------------------- UPDATE FROM MIHEY: ---------------------------------------
+    /*
          - the 'data' argument here is going to have to include the 'routingAmountsToSendToAmms' and
         'arbitrageAmountsToSendToAmms' return values from 'calculateRouteAndArbitarge()'.
         - 'tokenIn' will be set to zero;
@@ -149,5 +149,5 @@ contract DexProvider is IUniswapV2Callee {
             - return the flash loan (we'll have to calculate it - call it 'returnLoan')
             - give the user 'ySum - returnLoan' amount of Y.
         */
-    }
+  }
 }

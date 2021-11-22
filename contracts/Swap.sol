@@ -18,14 +18,6 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    address private constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address private constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address[2] private _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS
-    ];
     Structs.AmountsToSendToAmm[2] private amountsToSendToAmm;
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
