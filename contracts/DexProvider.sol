@@ -2,6 +2,7 @@
 //solhint-disable-next-line
 pragma solidity 0.6.6 || 0.8.3;
 
+import "./libraries/Structs.sol";
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -20,9 +21,9 @@ contract DexProvider is IUniswapV2Callee {
         0x115934131916C8b277DD010Ee02de363c09d037c;
 
     address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS
-        , _SUSHI_FACTORY_ADDRESS
-        , _SHIBA_FACTORY_ADDRESS
+        _UNIV2_FACTORY_ADDRESS,
+        _SUSHI_FACTORY_ADDRESS,
+        _SHIBA_FACTORY_ADDRESS
     ];
 
     function getReserves(
@@ -86,7 +87,8 @@ contract DexProvider is IUniswapV2Callee {
         address tokenIn,
         address tokenOut,
         uint256 xToLoan,
-        uint256 yToLoan
+        uint256 yToLoan,
+        bytes memory data
     ) public {
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
@@ -96,12 +98,12 @@ contract DexProvider is IUniswapV2Callee {
             tokenIn,
             tokenOut
         );
-        //if bytes == 2 we flipped the token order otherwise 1
+
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
-            new bytes(token0 == tokenIn ? 1 : 2)
+            data
         );
     }
 
@@ -111,10 +113,24 @@ contract DexProvider is IUniswapV2Callee {
         uint256 amount1,
         bytes calldata data
     ) external override {
-        //if length of bytes == 2, the tokenIn and tokenOut are reversed
+        //TODO: make sure that tokenIn and tokenOut are the right way around
         IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
         address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
         address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
+        (
+            Structs.Amm[] memory amms,
+            address[] memory factoriesSupportingTokenPair,
+            uint256[] memory routingAmountsToSendToAmms,
+            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
+        ) = abi.decode(
+                data,
+                (
+                    Structs.Amm[],
+                    address[],
+                    uint256[],
+                    Structs.AmountsToSendToAmm[]
+                )
+            );
         assert(
             msg.sender ==
                 IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(

@@ -21,11 +21,6 @@ contract Swap is DexProvider {
     Structs.AmountsToSendToAmm[3] private _amountsToSendToAmm;
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
-    address private _wethAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address private _tokenAddress = 0x2e9d63788249371f1DFC918a52f8d799F4a38C94;
-
-    // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    // IWETH9 private _WETH = IWETH9(_wethAddress);
 
     function swap(
         address tokenIn,
@@ -39,16 +34,34 @@ contract Swap is DexProvider {
 
         uint256 noFactoriesSupportingTokenPair = 0;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            if (IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) != address(0x0)) {
+            if (
+                IUniswapV2Factory(_factoryAddresses[i]).getPair(
+                    tokenIn,
+                    tokenOut
+                ) != address(0x0)
+            ) {
                 noFactoriesSupportingTokenPair++;
             }
         }
 
-        Structs.Amm[] memory amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
-        address[] memory factoriesSupportingTokenPair = new address[](noFactoriesSupportingTokenPair);
+        Structs.Amm[] memory amms = new Structs.Amm[](
+            noFactoriesSupportingTokenPair
+        );
+        address[] memory factoriesSupportingTokenPair = new address[](
+            noFactoriesSupportingTokenPair
+        );
         uint256 j = 0;
-        for (uint256 i = 0; i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair; i++) {
-            if (IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) != address(0x0)) {
+        for (
+            uint256 i = 0;
+            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
+            i++
+        ) {
+            if (
+                IUniswapV2Factory(_factoryAddresses[i]).getPair(
+                    tokenIn,
+                    tokenOut
+                ) != address(0x0)
+            ) {
                 (amms[j].x, amms[j].y) = getReserves(
                     _factoryAddresses[i],
                     tokenIn,
@@ -61,26 +74,25 @@ contract Swap is DexProvider {
         console.log(amms[0].x, amms[0].y, "UNI RESERVE: WETH:TOKE");
 
         (
-            uint256[] memory routingAmountsToSendToAmmsTemp,
-            Structs.AmountsToSendToAmm[]
-                memory arbitrageAmountsToSendToAmmsTemp,
+            uint256[] memory routingAmountsToSendToAmms,
+            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
             uint256 amountOfYtoFlashLoan
         ) = calculateRouteAndArbitarge(amms, amountIn);
         console.log(amountOfYtoFlashLoan, "<- loan amount");
         for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
             _amountsToSendToAmm[i].x =
-                arbitrageAmountsToSendToAmmsTemp[i].x +
-                routingAmountsToSendToAmmsTemp[i];
-            _amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmmsTemp[i].y;
+                arbitrageAmountsToSendToAmms[i].x +
+                routingAmountsToSendToAmms[i];
+            _amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmms[i].y;
         }
         uint256 xToLoan = 0;
         uint256 yToLoan = 0;
         for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
             console.log(_amountsToSendToAmm[i].x, "XXXX");
             xToLoan +=
-                arbitrageAmountsToSendToAmmsTemp[i].x +
-                routingAmountsToSendToAmmsTemp[i];
-            yToLoan += arbitrageAmountsToSendToAmmsTemp[i].y;
+                arbitrageAmountsToSendToAmms[i].x +
+                routingAmountsToSendToAmms[i];
+            yToLoan += arbitrageAmountsToSendToAmms[i].y;
         }
         console.log(xToLoan, yToLoan, "TOLOAN");
         console.log(amountIn, "AmountIN");
@@ -90,7 +102,13 @@ contract Swap is DexProvider {
         if (xToLoan > 0 || yToLoan > 0) {
             //TODO: how to get the amountOut from flashSwap?
             console.log("FLASH");
-            flashSwap(tokenIn, tokenOut, xToLoan, yToLoan);
+            bytes memory data = abi.encode(
+                amms,
+                factoriesSupportingTokenPair,
+                routingAmountsToSendToAmms,
+                arbitrageAmountsToSendToAmms
+            );
+            flashSwap(tokenIn, tokenOut, xToLoan, yToLoan, data);
         } else {
             console.log("NO FLASH");
             for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
