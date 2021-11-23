@@ -6,13 +6,15 @@ pragma experimental ABIEncoderV2;
 
 import "./libraries/Structs.sol";
 import "./libraries/SharedFunctions.sol";
-// import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
+import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
+// import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "hardhat/console.sol";
 
@@ -50,7 +52,7 @@ contract DexProvider is IUniswapV2Callee {
     }
 
     //swaps tokenIn -> tokenOut
-    //assumes the contract already recieved `amountIn` of tokenIn by the user
+    //assumes the contract already received `amountIn` of tokenIn by the user
     //at the end of the execution, this address will be holding the tokenOut
     function executeSwap(
         address factoryAddress,
@@ -95,24 +97,23 @@ contract DexProvider is IUniswapV2Callee {
         address whereToLoan,
         bytes memory data
     ) public {
-//        (
-//        address[] memory factoriesSupportingTokenPair,
-//        uint256[] memory routingAmountsToSendToAmms,
-//        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
-//        ) = abi.decode(
-//            data,
-//            (
-//            address[],
-//            uint256[],
-//            Structs.AmountsToSendToAmm[]
-//            )
-//        );
-//        for (uint256 i = 0; i < amms.length; i++) {
-//            console.log(factoriesSupportingTokenPair[i]);
-//            console.log(routingAmountsToSendToAmms[i]);
-//            console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
-//        }
-
+        //        (
+        //        address[] memory factoriesSupportingTokenPair,
+        //        uint256[] memory routingAmountsToSendToAmms,
+        //        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
+        //        ) = abi.decode(
+        //            data,
+        //            (
+        //            address[],
+        //            uint256[],
+        //            Structs.AmountsToSendToAmm[]
+        //            )
+        //        );
+        //        for (uint256 i = 0; i < amms.length; i++) {
+        //            console.log(factoriesSupportingTokenPair[i]);
+        //            console.log(routingAmountsToSendToAmms[i]);
+        //            console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
+        //        }
 
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
@@ -149,11 +150,7 @@ contract DexProvider is IUniswapV2Callee {
             Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
         ) = abi.decode(
                 data,
-                (
-                    address[],
-                    uint256[],
-                    Structs.AmountsToSendToAmm[]
-                )
+                (address[], uint256[], Structs.AmountsToSendToAmm[])
             );
         assert(
             msg.sender ==

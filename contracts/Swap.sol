@@ -9,6 +9,7 @@ import "./libraries/Route.sol";
 import "./libraries/SharedFunctions.sol";
 import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
+
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
@@ -22,7 +23,18 @@ contract Swap is DexProvider {
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
-    function _factoriesWhichSupportPair(address tokenIn, address tokenOut) private view returns(address[] memory, Structs.Amm[] memory amms) {
+    // @param tokenIn - the first token we are interested in; usually considered to be the token which the user is putting in
+    // @param tokenOut - the second token we are interested in; usually considered to be the token which the user wants to get back
+    // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
+    // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
+    function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
+        private
+        view
+        returns (
+            address[] memory factoriesSupportingTokenPair,
+            Structs.Amm[] memory amms
+        )
+    {
         uint256 noFactoriesSupportingTokenPair = 0;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
@@ -35,10 +47,8 @@ contract Swap is DexProvider {
             }
         }
 
-        amms = new Structs.Amm[](
-            noFactoriesSupportingTokenPair
-        );
-        address[] memory factoriesSupportingTokenPair = new address[](
+        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        factoriesSupportingTokenPair = new address[](
             noFactoriesSupportingTokenPair
         );
         uint256 j = 0;
@@ -74,7 +84,10 @@ contract Swap is DexProvider {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
             "user needs to approve"
         );
-        (address[] memory factoriesSupportingTokenPair, Structs.Amm[] memory amms) = _factoriesWhichSupportPair(tokenIn, tokenOut);
+        (
+            address[] memory factoriesSupportingTokenPair,
+            Structs.Amm[] memory amms
+        ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
 
         console.log(amms[0].x, amms[0].y, "UNI RESERVE: WETH:TOKE");
 
@@ -111,17 +124,20 @@ contract Swap is DexProvider {
                 arbitrageAmountsToSendToAmms
             );
 
-//            for (uint256 i = 0; i < amms.length; i++) {
-//                console.log(factoriesSupportingTokenPair[i]);
-//                console.log(routingAmountsToSendToAmms[i]);
-//                console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
-//            }
+            //            for (uint256 i = 0; i < amms.length; i++) {
+            //                console.log(factoriesSupportingTokenPair[i]);
+            //                console.log(routingAmountsToSendToAmms[i]);
+            //                console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
+            //            }
 
-            address whereToLoan = factoriesSupportingTokenPair[whereToLoanIndex];
+            address whereToLoan = factoriesSupportingTokenPair[
+                whereToLoanIndex
+            ];
             flashSwap(tokenIn, tokenOut, yToLoan, whereToLoan, data);
         } else {
             console.log("NO FLASH");
             for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
+                //TODO: the 'require' below this is fishy... it's possible that the user had enough of Y for the arbitrage, and hence doesn't need a flash loan, but is still arbitraging and hence transferring Y for X
                 require(_amountsToSendToAmm[i].y == 0, "y should be 0");
                 if (_amountsToSendToAmm[i].x > 0) {
                     amountOut += executeSwap(
@@ -142,7 +158,6 @@ contract Swap is DexProvider {
         emit SwapEvent(amountIn, amountOut);
     }
 
-
     // @param tokenIn - the token which the user will provide/is wanting to sell
     // @param tokenOut - the token which the user will be given/is wanting to buy
     // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
@@ -152,7 +167,10 @@ contract Swap is DexProvider {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 totalOut) {
-        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(tokenIn, tokenOut);
+        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
+            tokenIn,
+            tokenOut
+        );
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
             (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
@@ -184,7 +202,10 @@ contract Swap is DexProvider {
         address arbitragingFor,
         address intermediateToken
     ) external view returns (uint256 arbitrageGain, uint256 tokenInRequired) {
-        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(arbitragingFor, intermediateToken);
+        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
+            arbitragingFor,
+            intermediateToken
+        );
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
             (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
@@ -236,8 +257,11 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan, whereToLoanIndex) = Arbitrage
-                .arbitrageForY(amms, totalYGainedFromRouting);
+            (
+                arbitrageAmountsToSendToAmms,
+                amountOfYtoFlashLoan,
+                whereToLoanIndex
+            ) = Arbitrage.arbitrageForY(amms, totalYGainedFromRouting);
         }
     }
 

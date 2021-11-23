@@ -16,7 +16,15 @@ library Arbitrage {
     function arbitrageWrapper(
         uint256[2][] memory ammsArray,
         uint256 amountOfYHeld
-    ) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256, uint256 whereToLoanIndex) {
+    )
+        public
+        pure
+        returns (
+            Structs.AmountsToSendToAmm[] memory,
+            uint256,
+            uint256 whereToLoanIndex
+        )
+    {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -152,24 +160,27 @@ library Arbitrage {
             ) {
                 //If the union of the left and right arrays is all of the AMMs, then the last step is to just
                 // arbitrage on their aggregates.
-                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
-                    sortedAmmsUpTol,
-                    arbHelper.dyOpt
-                );
+                arbHelper.ySplits = SharedFunctions
+                    .howToSplitRoutingOnLeveledAmms(
+                        sortedAmmsUpTol,
+                        arbHelper.dyOpt
+                    );
                 arbHelper.doneArbitraging = true;
             } else if (arbHelper.dyBar < arbHelper.dy) {
                 //Need to level the left AMMs, as the cost of leveling the right ones would be higher
-                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
-                    sortedAmmsUpTol,
-                    arbHelper.dyBar
-                );
+                arbHelper.ySplits = SharedFunctions
+                    .howToSplitRoutingOnLeveledAmms(
+                        sortedAmmsUpTol,
+                        arbHelper.dyBar
+                    );
                 arbHelper.increaseLow = true;
             } else if (arbHelper.dyBar >= arbHelper.dy) {
                 //Need to level the right AMMs, as the cost of leveling the left ones would be higher
-                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
-                    sortedAmmsUpTol,
-                    arbHelper.dy
-                );
+                arbHelper.ySplits = SharedFunctions
+                    .howToSplitRoutingOnLeveledAmms(
+                        sortedAmmsUpTol,
+                        arbHelper.dy
+                    );
                 arbHelper.increaseLow = false;
             }
 
@@ -178,18 +189,19 @@ library Arbitrage {
             for (uint256 k = 0; k <= arbHelper.left; ++k) {
                 uint256 xGain = SharedFunctions.quantityOfXForY(
                     amms[arbHelper.sortedAmmIndices[k]],
-                        arbHelper.ySplits[k]
+                    arbHelper.ySplits[k]
                 );
                 xGainSum += xGain;
-                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].y += arbHelper.ySplits[
-                    k
-                ];
+                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]]
+                    .y += arbHelper.ySplits[k];
                 amms[arbHelper.sortedAmmIndices[k]].y += arbHelper.ySplits[k];
                 amms[arbHelper.sortedAmmIndices[k]].x -= xGain;
                 if (amountOfYHeld >= arbHelper.ySplits[k]) {
                     amountOfYHeld -= arbHelper.ySplits[k];
                 } else {
-                    flashLoanRequiredAmount += arbHelper.ySplits[k] - amountOfYHeld;
+                    flashLoanRequiredAmount +=
+                        arbHelper.ySplits[k] -
+                        amountOfYHeld;
                     amountOfYHeld = 0;
                 }
             }
@@ -237,7 +249,11 @@ library Arbitrage {
                 break;
             }
         }
-        return (amountsToSendToAmms, flashLoanRequiredAmount, arbHelper.sortedAmmIndices[arbHelper.sortedAmmIndices.length - 1]);
+        return (
+            amountsToSendToAmms,
+            flashLoanRequiredAmount,
+            arbHelper.sortedAmmIndices[arbHelper.sortedAmmIndices.length - 1]
+        );
     }
 
     //(Appendix B, formula 22)
