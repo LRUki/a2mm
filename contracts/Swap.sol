@@ -208,8 +208,10 @@ contract Swap is DexProvider {
 
     // @notice - for now, only the first two AMMs in the list will actually be considered for anything
     // @param amountOfX - how much the user is willing to trade
-    // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM (ordered in the same way as the AMMs were passed in)
-    // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully complete the transation. This is done for the arbitrage step.
+    // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM \
+    // (ordered in the same way as the AMMs were passed in)
+    // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully \
+    // complete the transation. This is done for the arbitrage step.
     function calculateRouteAndArbitarge(
         Structs.Amm[] memory amms,
         uint256 amountOfX
