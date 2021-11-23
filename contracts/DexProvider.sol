@@ -16,10 +16,13 @@ contract DexProvider is IUniswapV2Callee {
         0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address internal constant _SUSHI_FACTORY_ADDRESS =
         0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    address internal constant _SHIBA_FACTORY_ADDRESS =
+        0x115934131916C8b277DD010Ee02de363c09d037c;
 
-    address[2] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS
+    address[3] internal _factoryAddresses = [
+        _UNIV2_FACTORY_ADDRESS
+        , _SUSHI_FACTORY_ADDRESS
+        , _SHIBA_FACTORY_ADDRESS
     ];
 
     function getReserves(
@@ -103,11 +106,8 @@ contract DexProvider is IUniswapV2Callee {
     }
 
     function uniswapV2Call(
-        //solhint-disable-next-line
         address sender,
-        //solhint-disable-next-line
         uint256 amount0,
-        //solhint-disable-next-line
         uint256 amount1,
         bytes calldata data
     ) external override {

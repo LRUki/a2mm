@@ -18,11 +18,11 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    Structs.AmountsToSendToAmm[2] private _amountsToSendToAmm;
+    Structs.AmountsToSendToAmm[3] private _amountsToSendToAmm;
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
     address private _wethAddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address private _tokeAddress = 0x2e9d63788249371f1DFC918a52f8d799F4a38C94;
+    address private _tokenAddress = 0x2e9d63788249371f1DFC918a52f8d799F4a38C94;
 
     // address private _uniV2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     // IWETH9 private _WETH = IWETH9(_wethAddress);
@@ -34,18 +34,30 @@ contract Swap is DexProvider {
     ) external {
         require(
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
-            "user need to approve"
+            "user needs to approve"
         );
 
-        Structs.Amm[] memory amms = new Structs.Amm[](_factoryAddresses.length);
-        for (uint256 i = 0; i < _factoryAddresses.length; ++i) {
-            //TODO: check if tokenIN tokenOUt exists in the factory
-            (amms[i].x, amms[i].y) = getReserves(
-                _factoryAddresses[i],
-                tokenIn,
-                tokenOut
-            );
+        uint256 noFactoriesSupportingTokenPair = 0;
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            if (IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) != address(0x0)) {
+                noFactoriesSupportingTokenPair++;
+            }
         }
+
+        Structs.Amm[] memory amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        address[] memory factoriesSupportingTokenPair = new address[](noFactoriesSupportingTokenPair);
+        uint256 j = 0;
+        for (uint256 i = 0; i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair; i++) {
+            if (IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) != address(0x0)) {
+                (amms[j].x, amms[j].y) = getReserves(
+                    _factoryAddresses[i],
+                    tokenIn,
+                    tokenOut
+                );
+                factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
+            }
+        }
+
         console.log(amms[0].x, amms[0].y, "UNI RESERVE: WETH:TOKE");
 
         (
@@ -238,7 +250,6 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](1);
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
-            //solhint-disable-next-line
             Structs.AmountsToSendToAmm[] memory arbitrages;
             (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage
                 .arbitrageForY(amms, totalYGainedFromRouting);
