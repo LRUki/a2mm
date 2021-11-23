@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 //solhint-disable-next-line
 pragma solidity 0.6.6 || 0.8.3;
+//Solidity 0.8 already comes with ABIEncoderV2 out of the box; however, 0.6.6 doesn't.
+pragma experimental ABIEncoderV2;
 
 import "./libraries/Structs.sol";
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
