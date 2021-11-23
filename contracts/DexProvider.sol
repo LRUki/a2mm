@@ -5,6 +5,7 @@ pragma solidity 0.6.6 || 0.8.3;
 pragma experimental ABIEncoderV2;
 
 import "./libraries/Structs.sol";
+import "./libraries/SharedFunctions.sol";
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -12,6 +13,8 @@ import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
+
+import "hardhat/console.sol";
 
 contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
@@ -88,15 +91,34 @@ contract DexProvider is IUniswapV2Callee {
     function flashSwap(
         address tokenIn,
         address tokenOut,
-        uint256 xToLoan,
         uint256 yToLoan,
+        address whereToLoan,
         bytes memory data
     ) public {
+//        (
+//        address[] memory factoriesSupportingTokenPair,
+//        uint256[] memory routingAmountsToSendToAmms,
+//        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
+//        ) = abi.decode(
+//            data,
+//            (
+//            address[],
+//            uint256[],
+//            Structs.AmountsToSendToAmm[]
+//            )
+//        );
+//        for (uint256 i = 0; i < amms.length; i++) {
+//            console.log(factoriesSupportingTokenPair[i]);
+//            console.log(routingAmountsToSendToAmms[i]);
+//            console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
+//        }
+
+
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (xToLoan, yToLoan)
-            : (yToLoan, xToLoan);
-        address pairAddress = IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
+            ? (uint256(0), yToLoan)
+            : (yToLoan, uint256(0));
+        address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
             tokenIn,
             tokenOut
         );
@@ -117,17 +139,17 @@ contract DexProvider is IUniswapV2Callee {
     ) external override {
         //TODO: make sure that tokenIn and tokenOut are the right way around
         IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
-        address tokenIn = data.length == 2 ? pair.token1() : pair.token0();
-        address tokenOut = data.length == 2 ? pair.token0() : pair.token1();
+        // tokenIn will be treated as X
+        address tokenIn = amount0 == 0 ? pair.token0() : pair.token1();
+        // tokenIn will be treated as Y
+        address tokenOut = amount0 == 0 ? pair.token1() : pair.token0();
         (
-            Structs.Amm[] memory amms,
             address[] memory factoriesSupportingTokenPair,
             uint256[] memory routingAmountsToSendToAmms,
             Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
         ) = abi.decode(
                 data,
                 (
-                    Structs.Amm[],
                     address[],
                     uint256[],
                     Structs.AmountsToSendToAmm[]
@@ -141,26 +163,6 @@ contract DexProvider is IUniswapV2Callee {
                 )
         ); // ensure that msg.sender is a V2 pair
         //TODO: sort tokenInAmount, tokenOutAmount
-        //1. tokenInAmount = sum of xs in amountsToSendToAmm - userAmountIn, tokenOutAmount = 0
-        //1. tokenInAmount = 0 , tokenOutAmount = sum of ys in amountsToSendToAmm
-
-        //2. convert ys to xs and keep track of x we get
-        //xSum = 0
-        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-        //    xSum += executeSwap(_factoryAddresses[i], tokenOut,tokenIn, amountsToSendToAmm[i].y);
-        // }
-
-        //require(xSum + userAmountIn == sum(amountsToSendToAmm.x)) ????
-
-        //3. convert tokenIn(x) to tokenOut(y) and keep track of tokenOut we get
-        //ySum = 0
-        // for (uint256 i = 0; i < amountsToSendToAmm.length; ++i) {
-        //    ySum += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, amountsToSendToAmm[i].x);
-        // }
-
-        //4 return tokenOutAmount of y + fee to Uniswap
-        //keep the ySum - (tokenOutAmount of y + fee)
-        //TODO:return back to the sender
 
         //------------------------------------- UPDATE FROM MIHEY: ---------------------------------------
         /*

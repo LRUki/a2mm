@@ -16,7 +16,7 @@ library Arbitrage {
     function arbitrageWrapper(
         uint256[2][] memory ammsArray,
         uint256 amountOfYHeld
-    ) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
+    ) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256, uint256[] memory sortedAmmIndices) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -31,12 +31,14 @@ library Arbitrage {
     // @return amountsToSendToAmms - the calculated amounts of (x, y) pairs to send to the AMMs for arbitrage. \
     // Ordered in the same order as the argument.
     // @return flashLoanRequiredAmount - how large of a flash loan is required to complete the arbitrage
+    // @return sortedAmmIndices - the sorted indices as they were initially before any steps of arbitrage were done
     function arbitrageForY(Structs.Amm[] memory amms, uint256 amountOfYHeld)
         public
         pure
         returns (
             Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
-            uint256 flashLoanRequiredAmount
+            uint256 flashLoanRequiredAmount,
+            uint256[] memory sortedAmmIndices
         )
     {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
@@ -52,7 +54,8 @@ library Arbitrage {
             0,
             0,
             false,
-            false
+            false,
+            new uint256[](0)
         );
         arbHelper.ml = Structs.Amm(
             amms[arbHelper.sortedAmmIndices[arbHelper.left]].x,
@@ -69,7 +72,6 @@ library Arbitrage {
         }
 
         flashLoanRequiredAmount = 0;
-        uint256[] memory ySplits;
 
         //Level until the union of ml and mr is sortedAmmIndices.
         while (_isArbitrageProfitable(arbHelper.ml, arbHelper.mr)) {
@@ -150,21 +152,21 @@ library Arbitrage {
             ) {
                 //If the union of the left and right arrays is all of the AMMs, then the last step is to just
                 // arbitrage on their aggregates.
-                ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
+                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
                     sortedAmmsUpTol,
                     arbHelper.dyOpt
                 );
                 arbHelper.doneArbitraging = true;
             } else if (arbHelper.dyBar < arbHelper.dy) {
                 //Need to level the left AMMs, as the cost of leveling the right ones would be higher
-                ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
+                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
                     sortedAmmsUpTol,
                     arbHelper.dyBar
                 );
                 arbHelper.increaseLow = true;
             } else if (arbHelper.dyBar >= arbHelper.dy) {
                 //Need to level the right AMMs, as the cost of leveling the left ones would be higher
-                ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
+                arbHelper.ySplits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
                     sortedAmmsUpTol,
                     arbHelper.dy
                 );
@@ -176,18 +178,18 @@ library Arbitrage {
             for (uint256 k = 0; k <= arbHelper.left; ++k) {
                 uint256 xGain = SharedFunctions.quantityOfXForY(
                     amms[arbHelper.sortedAmmIndices[k]],
-                    ySplits[k]
+                        arbHelper.ySplits[k]
                 );
                 xGainSum += xGain;
-                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].y += ySplits[
+                amountsToSendToAmms[arbHelper.sortedAmmIndices[k]].y += arbHelper.ySplits[
                     k
                 ];
-                amms[arbHelper.sortedAmmIndices[k]].y += ySplits[k];
+                amms[arbHelper.sortedAmmIndices[k]].y += arbHelper.ySplits[k];
                 amms[arbHelper.sortedAmmIndices[k]].x -= xGain;
-                if (amountOfYHeld >= ySplits[k]) {
-                    amountOfYHeld -= ySplits[k];
+                if (amountOfYHeld >= arbHelper.ySplits[k]) {
+                    amountOfYHeld -= arbHelper.ySplits[k];
                 } else {
-                    flashLoanRequiredAmount += ySplits[k] - amountOfYHeld;
+                    flashLoanRequiredAmount += arbHelper.ySplits[k] - amountOfYHeld;
                     amountOfYHeld = 0;
                 }
             }
@@ -235,6 +237,7 @@ library Arbitrage {
                 break;
             }
         }
+        return (amountsToSendToAmms, flashLoanRequiredAmount, arbHelper.sortedAmmIndices);
     }
 
     //(Appendix B, formula 22)
@@ -329,5 +332,6 @@ library Arbitrage {
         uint256 dyOpt;
         bool increaseLow;
         bool doneArbitraging;
+        uint256[] ySplits;
     }
 }

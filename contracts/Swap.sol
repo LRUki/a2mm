@@ -22,16 +22,7 @@ contract Swap is DexProvider {
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
-    function swap(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn
-    ) external {
-        require(
-            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
-            "user needs to approve"
-        );
-
+    function _factoriesWhichSupportPair(address tokenIn, address tokenOut) private view returns(address[] memory, Structs.Amm[] memory amms) {
         uint256 noFactoriesSupportingTokenPair = 0;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
@@ -44,7 +35,7 @@ contract Swap is DexProvider {
             }
         }
 
-        Structs.Amm[] memory amms = new Structs.Amm[](
+        amms = new Structs.Amm[](
             noFactoriesSupportingTokenPair
         );
         address[] memory factoriesSupportingTokenPair = new address[](
@@ -71,12 +62,27 @@ contract Swap is DexProvider {
             }
         }
 
+        return (factoriesSupportingTokenPair, amms);
+    }
+
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn
+    ) external {
+        require(
+            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
+            "user needs to approve"
+        );
+        (address[] memory factoriesSupportingTokenPair, Structs.Amm[] memory amms) = _factoriesWhichSupportPair(tokenIn, tokenOut);
+
         console.log(amms[0].x, amms[0].y, "UNI RESERVE: WETH:TOKE");
 
         (
             uint256[] memory routingAmountsToSendToAmms,
             Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            uint256 amountOfYtoFlashLoan
+            uint256 amountOfYtoFlashLoan,
+            uint256[] memory arbitrageSortedAmmIndices
         ) = calculateRouteAndArbitarge(amms, amountIn);
         console.log(amountOfYtoFlashLoan, "<- loan amount");
         for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
@@ -85,37 +91,42 @@ contract Swap is DexProvider {
                 routingAmountsToSendToAmms[i];
             _amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmms[i].y;
         }
-        uint256 xToLoan = 0;
+
         uint256 yToLoan = 0;
         for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
             console.log(_amountsToSendToAmm[i].x, "XXXX");
-            xToLoan +=
-                arbitrageAmountsToSendToAmms[i].x +
-                routingAmountsToSendToAmms[i];
+
             yToLoan += arbitrageAmountsToSendToAmms[i].y;
         }
-        console.log(xToLoan, yToLoan, "TOLOAN");
+        console.log(yToLoan, "TOLOAN");
         console.log(amountIn, "AmountIN");
         //handle integer division error
-        xToLoan = xToLoan > amountIn ? xToLoan - amountIn : 0;
         uint256 amountOut = 0;
-        if (xToLoan > 0 || yToLoan > 0) {
+        if (yToLoan > 0) {
             //TODO: how to get the amountOut from flashSwap?
             console.log("FLASH");
             bytes memory data = abi.encode(
-                amms,
                 factoriesSupportingTokenPair,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            flashSwap(tokenIn, tokenOut, xToLoan, yToLoan, data);
+
+//            for (uint256 i = 0; i < amms.length; i++) {
+//                console.log(factoriesSupportingTokenPair[i]);
+//                console.log(routingAmountsToSendToAmms[i]);
+//                console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
+//            }
+
+            //TODO: we don't have to return a whole array to find out 'whereToLoan' - we only need to return the last AMM's index from calculateRouteAndArbitrage (and hence also arbitrage), i.e. 'arbitrageSortedAmmIndices[arbitrageSortedAmmIndices.length - 1]'
+            address whereToLoan = factoriesSupportingTokenPair[arbitrageSortedAmmIndices[arbitrageSortedAmmIndices.length - 1]];
+            flashSwap(tokenIn, tokenOut, yToLoan, whereToLoan, data);
         } else {
             console.log("NO FLASH");
             for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
                 require(_amountsToSendToAmm[i].y == 0, "y should be 0");
                 if (_amountsToSendToAmm[i].x > 0) {
                     amountOut += executeSwap(
-                        _factoryAddresses[i],
+                        factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
                         _amountsToSendToAmm[i].x
@@ -123,9 +134,7 @@ contract Swap is DexProvider {
                 }
             }
         }
-        //        for (uint256 i = 0; i < route.length; ++i) {
-        //            amountOut += executeSwap(_factoryAddresses[i], tokenIn, tokenOut, route[i].x);
-        //        }
+
         console.log(amountOut, IERC20(tokenOut).balanceOf(address(this)));
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
@@ -133,6 +142,7 @@ contract Swap is DexProvider {
         );
         emit SwapEvent(amountIn, amountOut);
     }
+
 
     // @param tokenIn - the token which the user will provide/is wanting to sell
     // @param tokenOut - the token which the user will be given/is wanting to buy
@@ -143,30 +153,18 @@ contract Swap is DexProvider {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 totalOut) {
-        Structs.Amm[] memory amms0 = new Structs.Amm[](
-            _factoryAddresses.length
-        );
-        Structs.Amm[] memory amms1 = new Structs.Amm[](
-            _factoryAddresses.length
-        );
-        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            (amms0[i].x, amms0[i].y) = getReserves(
-                _factoryAddresses[i],
-                tokenIn,
-                tokenOut
-            );
-            (amms1[i].x, amms1[i].y) = getReserves(
-                _factoryAddresses[i],
-                tokenIn,
-                tokenOut
-            );
+        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(tokenIn, tokenOut);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
+        for (uint256 i = 0; i < amms0.length; i++) {
+            (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
         }
 
         totalOut = 0;
         (
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
-            uint256 flashLoanRequired
+            uint256 flashLoanRequired,
+            uint256[] memory arbitrageSortedAmmIndices
         ) = calculateRouteAndArbitarge(amms0, amountIn);
         for (uint256 i = 0; i < amms0.length; i++) {
             totalOut += SharedFunctions.quantityOfYForX(
@@ -187,27 +185,14 @@ contract Swap is DexProvider {
         address arbitragingFor,
         address intermediateToken
     ) external view returns (uint256 arbitrageGain, uint256 tokenInRequired) {
-        Structs.Amm[] memory amms0 = new Structs.Amm[](
-            _factoryAddresses.length
-        );
-        Structs.Amm[] memory amms1 = new Structs.Amm[](
-            _factoryAddresses.length
-        );
-        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            (amms0[i].x, amms0[i].y) = getReserves(
-                _factoryAddresses[i],
-                intermediateToken,
-                arbitragingFor
-            );
-            (amms1[i].x, amms1[i].y) = getReserves(
-                _factoryAddresses[i],
-                intermediateToken,
-                arbitragingFor
-            );
+        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(arbitragingFor, intermediateToken);
+        Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
+        for (uint256 i = 0; i < amms0.length; i++) {
+            (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
         }
 
         Structs.AmountsToSendToAmm[] memory arbitrages;
-        (arbitrages, tokenInRequired) = Arbitrage.arbitrageForY(amms0, 0);
+        (arbitrages, tokenInRequired, ) = Arbitrage.arbitrageForY(amms0, 0);
         arbitrageGain = 0;
         for (uint256 i = 0; i < amms0.length; i++) {
             arbitrageGain += SharedFunctions.quantityOfYForX(
@@ -215,25 +200,6 @@ contract Swap is DexProvider {
                 arbitrages[i].x
             );
         }
-    }
-
-    //returns mock routing for univ2 and sushi
-    function _mockAmountsToSendToAmms(uint256 amountIn)
-        private
-        pure
-        returns (Structs.AmountsToSendToAmm[] memory amountsToSendToAmms)
-    {
-        uint256 amountToSendToUniV2 = amountIn / 2;
-        uint256 amountToSendToSushi = amountIn - amountToSendToUniV2;
-        amountsToSendToAmms = new Structs.AmountsToSendToAmm[](2);
-        amountsToSendToAmms[0] = Structs.AmountsToSendToAmm(
-            amountToSendToUniV2,
-            0
-        );
-        amountsToSendToAmms[1] = Structs.AmountsToSendToAmm(
-            amountToSendToSushi,
-            0
-        );
     }
 
     // @notice - for now, only the first two AMMs in the list will actually be considered for anything
@@ -251,9 +217,11 @@ contract Swap is DexProvider {
         returns (
             uint256[] memory routingAmountsToSendToAmms,
             Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            uint256 amountOfYtoFlashLoan
+            uint256 amountOfYtoFlashLoan,
+            uint256[] memory arbitrageSortedAmmIndices
         )
     {
+        arbitrageSortedAmmIndices = new uint256[](0);
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
@@ -269,7 +237,7 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
             Structs.AmountsToSendToAmm[] memory arbitrages;
-            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage
+            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan, arbitrageSortedAmmIndices) = Arbitrage
                 .arbitrageForY(amms, totalYGainedFromRouting);
         }
     }
@@ -283,7 +251,8 @@ contract Swap is DexProvider {
         returns (
             uint256[] memory,
             Structs.AmountsToSendToAmm[] memory,
-            uint256
+            uint256,
+            uint256[] memory
         )
     {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
