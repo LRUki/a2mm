@@ -111,6 +111,7 @@ contract Swap is DexProvider {
 
             yToLoan += arbitrageAmountsToSendToAmms[i].y;
         }
+
         console.log(yToLoan, "TOLOAN");
         console.log(amountIn, "AmountIN");
         //handle integer division error
@@ -118,22 +119,11 @@ contract Swap is DexProvider {
         if (yToLoan > 0) {
             //TODO: how to get the amountOut from flashSwap?
             console.log("FLASH");
-            bytes memory data = abi.encode(
-                factoriesSupportingTokenPair,
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms
-            );
-
-            //            for (uint256 i = 0; i < amms.length; i++) {
-            //                console.log(factoriesSupportingTokenPair[i]);
-            //                console.log(routingAmountsToSendToAmms[i]);
-            //                console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
-            //            }
 
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
-            flashSwap(tokenIn, tokenOut, yToLoan, whereToLoan, data);
+            flashSwap(tokenIn, tokenOut, yToLoan, whereToLoan, factoriesSupportingTokenPair, routingAmountsToSendToAmms, arbitrageAmountsToSendToAmms);
         } else {
             console.log("NO FLASH");
             for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {

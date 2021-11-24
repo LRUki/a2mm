@@ -95,38 +95,25 @@ contract DexProvider is IUniswapV2Callee {
         address tokenOut,
         uint256 yToLoan,
         address whereToLoan,
-        bytes memory data
+        address[] memory factoriesSupportingTokenPair,
+        uint256[] memory routingAmountsToSendToAmms,
+        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
     ) public {
-        //        (
-        //        address[] memory factoriesSupportingTokenPair,
-        //        uint256[] memory routingAmountsToSendToAmms,
-        //        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
-        //        ) = abi.decode(
-        //            data,
-        //            (
-        //            address[],
-        //            uint256[],
-        //            Structs.AmountsToSendToAmm[]
-        //            )
-        //        );
-        //        for (uint256 i = 0; i < amms.length; i++) {
-        //            console.log(factoriesSupportingTokenPair[i]);
-        //            console.log(routingAmountsToSendToAmms[i]);
-        //            console.log(arbitrageAmountsToSendToAmms[i].x, arbitrageAmountsToSendToAmms[i].y);
-        //        }
-
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), yToLoan)
-            : (yToLoan, uint256(0));
         address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
             tokenIn,
             tokenOut
         );
 
+        bytes memory data = abi.encode(
+            factoriesSupportingTokenPair,
+            routingAmountsToSendToAmms,
+            arbitrageAmountsToSendToAmms,
+            whereToLoan
+        );
+
         IUniswapV2Pair(pairAddress).swap(
-            amount0Out,
-            amount1Out,
+            0,
+            yToLoan,
             address(this),
             data
         );
@@ -134,24 +121,27 @@ contract DexProvider is IUniswapV2Callee {
 
     function uniswapV2Call(
         address sender,
-        uint256 amount0,
-        uint256 amount1,
+        uint256 tokenInAmount,
+        uint256 tokenOutAmount,
         bytes calldata data
     ) external override {
+        require(tokenOutAmount != 0, "We must be loaning Y!");
+        require(tokenInAmount == 0, "We should not be loaning any X!");
+        (
+        address[] memory factoriesSupportingTokenPair,
+        uint256[] memory routingAmountsToSendToAmms,
+        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
+        address whereToRepayLoan
+        ) = abi.decode(
+            data,
+            (address[], uint256[], Structs.AmountsToSendToAmm[], address)
+        );
         //TODO: make sure that tokenIn and tokenOut are the right way around
         IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
         // tokenIn will be treated as X
-        address tokenIn = amount0 == 0 ? pair.token0() : pair.token1();
+        address tokenIn = pair.token0();
         // tokenIn will be treated as Y
-        address tokenOut = amount0 == 0 ? pair.token1() : pair.token0();
-        (
-            address[] memory factoriesSupportingTokenPair,
-            uint256[] memory routingAmountsToSendToAmms,
-            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
-        ) = abi.decode(
-                data,
-                (address[], uint256[], Structs.AmountsToSendToAmm[])
-            );
+        address tokenOut = pair.token1();
         assert(
             msg.sender ==
                 IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
@@ -159,22 +149,32 @@ contract DexProvider is IUniswapV2Callee {
                     tokenOut
                 )
         ); // ensure that msg.sender is a V2 pair
-        //TODO: sort tokenInAmount, tokenOutAmount
 
-        //------------------------------------- UPDATE FROM MIHEY: ---------------------------------------
-        /*
-         - the 'data' argument here is going to have to include the 'routingAmountsToSendToAmms' and
-        'arbitrageAmountsToSendToAmms' return values from 'calculateRouteAndArbitarge()'.
-        - 'tokenIn' will be set to zero;
-        - 'tokenOut' will be set to 'amountOfYtoFlashLoan' (return value from 'calculateRouteAndArbitarge()'). Note
-            that if this is zero, then we shouldn't reach the flash swap case.
-        - Then, the steps we take are:
-            - exchange X->Y using 'routingAmountsToSendToAmms'. No need to keep track of sum;
-            - exchange Y->X using the '.y' members of 'arbitrageAmountsToSendToAmms'. No need to keep track of sum;
-            - exchange X->Y using the '.x' members of 'arbitrageAmountsToSendToAmms', keeping track of how much Y
-                we get from this (sum it all up, and call it 'ySum');
-            - return the flash loan (we'll have to calculate it - call it 'returnLoan')
-            - give the user 'ySum - returnLoan' amount of Y.
-        */
+        //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
+        for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
+            if (routingAmountsToSendToAmms[i] != 0) {
+                TransferHelper.safeTransfer(tokenIn, msg.sender, routingAmountsToSendToAmms[i]);
+            }
+        }
+
+        for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
+            if (arbitrageAmountsToSendToAmms[i].x != 0) {
+                TransferHelper.safeTransfer(tokenOut, msg.sender, arbitrageAmountsToSendToAmms[i].y);
+            }
+        }
+
+        uint256 ySum = 0;
+        Structs.Amm memory temp = Structs.Amm(0, 0);
+        for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
+            if (arbitrageAmountsToSendToAmms[i].x != 0) {
+                (temp.x, temp.y) = getReserves(factoriesSupportingTokenPair[i], tokenIn, tokenOut);
+                ySum += SharedFunctions.quantityOfYForX(temp, arbitrageAmountsToSendToAmms[i].x);
+                TransferHelper.safeTransfer(tokenIn, msg.sender, arbitrageAmountsToSendToAmms[i].x);
+            }
+        }
+        //TODO: check if this is the correct formula for interest on the loan
+        uint256 returnLoan = tokenOutAmount * 1003 / 1000;
+
+        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, ySum - returnLoan);
     }
 }
