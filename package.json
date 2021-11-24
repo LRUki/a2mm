@@ -5,7 +5,8 @@
   "scripts": {
     "test": "npx hardhat test",
     "deploy": "npx hardhat run --network $npm_config_network scripts/deploy.ts",
-    "solhint": "solhint contracts/**/*.sol"
+    "solhint": "solhint contracts/**/*.sol",
+    "prettier": "prettier --write 'contracts/**/*.sol'"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,8 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.7",
     "hardhat": "^2.6.5",
+    "prettier": "^2.4.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
     "ts-node": "^10.3.0",
     "typescript": "^4.4.4"
   },
