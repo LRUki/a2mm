@@ -205,8 +205,8 @@ describe("==================================== Swap ============================
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
       swapTestCase;
-    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async () => {
-      const swapContract = await forkAndDeploy(blockNumber);
+    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber + 100*i}`, async () => {
+      const swapContract = await forkAndDeploy(blockNumber + 100*i);
       const [signer] = await ethers.getSigners();
 
       let [reserveIn, reserveOut] = await swapContract.getReserves(
