@@ -13,9 +13,13 @@ import {
   toStringMap,
   whatPrecision,
 } from "../scripts/utils/math";
+import forkAndDeploy from "../scripts/utils/forkAndDeploy";
 
 import deployContract from "../scripts/utils/deploy";
-describe("==================================== Swap ====================================", function () {
+import { BigNumber } from "@ethersproject/bignumber";
+import { Factory, factoryToAddress } from "../scripts/utils/Factory";
+
+describe("==================================== Swap Helpers ====================================", function () {
   before(async function () {
     const sharedFunctionsAddress = await deployContract("SharedFunctions");
 
@@ -181,3 +185,74 @@ describe("==================================== Swap ============================
     expect(amm[2].toString()).to.not.equal("0");
   });
 });
+
+describe("==================================== Swap ====================================", async () => {
+  const swapTestCases: [number, string[], number, BigNumber][] = [
+    [
+      13679800,
+      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
+      0.1,
+      ethers.utils.parseEther("0.1"),
+    ],
+    [
+      13679900,
+      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
+      0.1,
+      ethers.utils.parseEther("0.1"),
+    ],
+    [
+      13680100,
+      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
+      0.1,
+      ethers.utils.parseEther("0.1"),
+    ],
+  ];
+
+  swapTestCases.forEach((swapTestCase, i) => {
+    const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
+      swapTestCase;
+    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async () => {
+      const swapContract = await forkAndDeploy(blockNumber);
+      const [signer] = await ethers.getSigners();
+
+      let [reserveIn, reserveOut] = await swapContract.getReserves(
+        factoryToAddress[Factory.UNIV2],
+        tokenIn,
+        tokenOut
+      );
+      console.log(`reserves of ${tokenIn}, ${tokenOut} at UNIV2 are`, [
+        reserveIn.toString(),
+        reserveOut.toString(),
+      ]);
+      [reserveIn, reserveOut] = await swapContract.getReserves(
+        factoryToAddress[Factory.SHIBA],
+        tokenIn,
+        tokenOut
+      );
+      console.log(`reserves of ${tokenIn}, ${tokenOut} at SHIBA are`, [
+        reserveIn.toString(),
+        reserveOut.toString(),
+      ]);
+
+      //test
+
+      //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
+      //assuming that tokenIn is WETH
+      await topUpWETHAndApproveContractToUse(
+        signer,
+        `${inputAmount}`,
+        swapContract.address
+      );
+
+      //call the swap
+      //swapContract.swap()
+
+      //check the balanceOf the user etc
+      // getBalanceOfERC20(signer.address, tokenOut);
+    });
+  });
+});
+
+function sleep(time: number) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}

@@ -32,6 +32,8 @@ export async function quantityOfXForY(x: bigint, y: bigint, dy: bigint) {
   return await quantityOfYForX(y, x, dy);
 }
 
+//TODO: replace this with the function below to use bigint instead of Number
+//changa all the related caller too (is whatPrecision needed?)
 export async function calculateRatio(
   arrX: number,
   arrY: number,
@@ -48,3 +50,20 @@ export async function calculateRatio(
   }
   return ratio;
 }
+
+// export function calculateRatio(
+//   arrX: bigint,
+//   arrY: bigint,
+//   ammX: bigint,
+//   ammY: bigint
+// ): bigint {
+//   let ratio;
+//   if (ammX.toString() == "0") {
+//     let xGain = quantityOfXForY(BigInt(arrX), BigInt(arrY), BigInt(ammY));
+//     ratio = (arrY + ammY) / (arrX - xGain);
+//   } else {
+//     let yGain = quantityOfYForX(BigInt(arrX), BigInt(arrY), BigInt(ammX));
+//     ratio = (arrY - yGain) / (arrX + ammX);
+//   }
+//   return ratio;
+// }
