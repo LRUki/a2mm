@@ -200,14 +200,9 @@ contract DexProvider is IUniswapV2Callee {
                 arbitrageAmountsToSendToAmms,
                 whereToRepayLoan
             ) = abi.decode(
-                    data,
-                    (
-                        address[],
-                        uint256[],
-                        Structs.AmountsToSendToAmm[],
-                        address
-                    )
-                );
+                data,
+                (address[], uint256[], Structs.AmountsToSendToAmm[], address)
+            );
 
             address token0 = IUniswapV2Pair(msg.sender).token0();
             address token1 = IUniswapV2Pair(msg.sender).token1();
