@@ -13,238 +13,245 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
-// import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "hardhat/console.sol";
 
 contract DexProvider is IUniswapV2Callee {
-    event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
-    address internal constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address internal constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address internal constant _SHIBA_FACTORY_ADDRESS =
-        0x115934131916C8b277DD010Ee02de363c09d037c;
+  event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
+  address internal constant _UNIV2_FACTORY_ADDRESS =
+    0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+  address internal constant _SUSHI_FACTORY_ADDRESS =
+    0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+  address internal constant _SHIBA_FACTORY_ADDRESS =
+    0x115934131916C8b277DD010Ee02de363c09d037c;
 
-    address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS,
-        _SHIBA_FACTORY_ADDRESS
-    ];
+  address[3] internal _factoryAddresses = [
+    _UNIV2_FACTORY_ADDRESS,
+    _SUSHI_FACTORY_ADDRESS,
+    _SHIBA_FACTORY_ADDRESS
+  ];
 
-    function getReserves(
-        address factoryAddress,
-        address tokenA,
-        address tokenB
-    ) public view returns (uint256 reserveA, uint256 reserveB) {
-        address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
-            tokenA,
-            tokenB
-        );
-        require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
-        (reserveA, reserveB) = tokenA == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+  function getReserves(
+    address factoryAddress,
+    address tokenA,
+    address tokenB
+  ) public view returns (uint256 reserveA, uint256 reserveB) {
+    address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
+      tokenA,
+      tokenB
+    );
+    require(pairAddress != address(0), "This pool does not exist");
+    (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
+    (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+      .getReserves();
+    (reserveA, reserveB) = tokenA == token0
+      ? (reserve0, reserve1)
+      : (reserve1, reserve0);
+  }
+
+  //swaps tokenIn -> tokenOut
+  //assumes the contract already received `amountIn` of tokenIn by the user
+  //at the end of the execution, this address will be holding the tokenOut
+  function executeSwap(
+    address factoryAddress,
+    address tokenIn,
+    address tokenOut,
+    uint256 amountIn
+  ) public returns (uint256 amountOut) {
+    address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
+      tokenIn,
+      tokenOut
+    );
+    require(pairAddress != address(0), "This pool does not exist");
+    (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+    (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+      .getReserves();
+    (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
+      ? (reserve0, reserve1)
+      : (reserve1, reserve0);
+    amountOut = UniswapV2Library.getAmountOut(amountIn, reserveIn, reserveOut);
+    IERC20(tokenIn).transfer(pairAddress, amountIn);
+    (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
+      ? (uint256(0), amountOut)
+      : (amountOut, uint256(0));
+    IUniswapV2Pair(pairAddress).swap(
+      amount0Out,
+      amount1Out,
+      address(this),
+      new bytes(0)
+    );
+    emit ExecuteSwapEvent(amountIn, amountOut);
+    return amountOut;
+  }
+
+  // @param tokenIn - the first token we are interested in; usually considered to be the token which the user is putting in
+  // @param tokenOut - the second token we are interested in; usually considered to be the token which the user wants to get back
+  // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
+  // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
+  function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
+    internal
+    view
+    returns (
+      address[] memory factoriesSupportingTokenPair,
+      Structs.Amm[] memory amms
+    )
+  {
+    uint256 noFactoriesSupportingTokenPair = 0;
+    for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+      if (
+        IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) !=
+        address(0x0)
+      ) {
+        noFactoriesSupportingTokenPair++;
+      }
     }
 
-    //swaps tokenIn -> tokenOut
-    //assumes the contract already received `amountIn` of tokenIn by the user
-    //at the end of the execution, this address will be holding the tokenOut
-    function executeSwap(
-        address factoryAddress,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn
-    ) public returns (uint256 amountOut) {
-        address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
-            tokenIn,
-            tokenOut
+    amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+    factoriesSupportingTokenPair = new address[](
+      noFactoriesSupportingTokenPair
+    );
+    uint256 j = 0;
+    for (
+      uint256 i = 0;
+      i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
+      i++
+    ) {
+      if (
+        IUniswapV2Factory(_factoryAddresses[i]).getPair(tokenIn, tokenOut) !=
+        address(0x0)
+      ) {
+        (amms[j].x, amms[j].y) = getReserves(
+          _factoryAddresses[i],
+          tokenIn,
+          tokenOut
         );
-        require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
-        (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
-        amountOut = UniswapV2Library.getAmountOut(
-            amountIn,
-            reserveIn,
-            reserveOut
-        );
-        IERC20(tokenIn).transfer(pairAddress, amountIn);
-        (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), amountOut)
-            : (amountOut, uint256(0));
-        IUniswapV2Pair(pairAddress).swap(
-            amount0Out,
-            amount1Out,
-            address(this),
-            new bytes(0)
-        );
-        emit ExecuteSwapEvent(amountIn, amountOut);
-        return amountOut;
+        factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
+      }
     }
 
-    // @param tokenIn - the first token we are interested in; usually considered to be the token which the user is putting in
-    // @param tokenOut - the second token we are interested in; usually considered to be the token which the user wants to get back
-    // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
-    // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
-    function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
-        internal
-        view
-        returns (
-            address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
-        )
-    {
-        uint256 noFactoriesSupportingTokenPair = 0;
-        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            if (
-                IUniswapV2Factory(_factoryAddresses[i]).getPair(
-                    tokenIn,
-                    tokenOut
-                ) != address(0x0)
-            ) {
-                noFactoriesSupportingTokenPair++;
-            }
-        }
+    return (factoriesSupportingTokenPair, amms);
+  }
 
-        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
-        factoriesSupportingTokenPair = new address[](
-            noFactoriesSupportingTokenPair
+  function flashSwap(
+    address tokenIn,
+    address tokenOut,
+    uint256 yToLoan,
+    address whereToLoan,
+    address[] memory factoriesSupportingTokenPair,
+    uint256[] memory routingAmountsToSendToAmms,
+    Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
+  ) public {
+    address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
+      tokenIn,
+      tokenOut
+    );
+
+    (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+
+    bytes memory data = abi.encode(
+      factoriesSupportingTokenPair,
+      routingAmountsToSendToAmms,
+      arbitrageAmountsToSendToAmms,
+      whereToLoan
+    );
+    (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
+      ? (uint256(0), yToLoan)
+      : (yToLoan, uint256(0));
+    IUniswapV2Pair(pairAddress).swap(
+      amount0Out,
+      amount1Out,
+      address(this),
+      data
+    );
+  }
+
+  function uniswapV2Call(
+    address sender,
+    uint256 amount0Out,
+    uint256 amount1Out,
+    bytes calldata data
+  ) external override {
+      
+    require(
+      (amount0Out > 0 && amount1Out == 0) ||
+        (amount0Out == 0 && amount1Out > 0),
+      "flash loan invalid"
+    );
+
+    address[] memory factoriesSupportingTokenPair;
+    address whereToRepayLoan;
+   {
+    (
+      factoriesSupportingTokenPair,
+      uint256[] memory routingAmountsToSendToAmms,
+      Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
+      whereToRepayLoan
+    ) = abi.decode(
+        data,
+        (address[], uint256[], Structs.AmountsToSendToAmm[], address)
+      );
+
+    address token0 = IUniswapV2Pair(msg.sender).token0();
+    address token1 = IUniswapV2Pair(msg.sender).token1();
+    assert(
+      msg.sender == IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
+    );
+
+    (address tokenIn, address tokenOut) = amount0Out == 0
+      ? (token0, token1)
+      : (token1, token0);
+
+    //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
+    for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
+      if (routingAmountsToSendToAmms[i] != 0) {
+        executeSwap(
+          factoriesSupportingTokenPair[i],
+          tokenIn,
+          tokenOut,
+          routingAmountsToSendToAmms[i]
         );
-        uint256 j = 0;
-        for (
-            uint256 i = 0;
-            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
-            i++
-        ) {
-            if (
-                IUniswapV2Factory(_factoryAddresses[i]).getPair(
-                    tokenIn,
-                    tokenOut
-                ) != address(0x0)
-            ) {
-                (amms[j].x, amms[j].y) = getReserves(
-                    _factoryAddresses[i],
-                    tokenIn,
-                    tokenOut
-                );
-                factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
-            }
-        }
-
-        return (factoriesSupportingTokenPair, amms);
+      }
     }
 
-    function flashSwap(
-        address tokenIn,
-        address tokenOut,
-        uint256 yToLoan,
-        address whereToLoan,
-        address[] memory factoriesSupportingTokenPair,
-        uint256[] memory routingAmountsToSendToAmms,
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
-    ) public {
-        address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
-            tokenIn,
-            tokenOut
+    for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
+      if (arbitrageAmountsToSendToAmms[i].y != 0) {
+        executeSwap(
+          factoriesSupportingTokenPair[i],
+          tokenOut,
+          tokenIn,
+          arbitrageAmountsToSendToAmms[i].y
         );
-
-        bytes memory data = abi.encode(
-            factoriesSupportingTokenPair,
-            routingAmountsToSendToAmms,
-            arbitrageAmountsToSendToAmms,
-            whereToLoan
-        );
-
-        IUniswapV2Pair(pairAddress).swap(0, yToLoan, address(this), data);
+      }
     }
 
-    function uniswapV2Call(
-        address sender,
-        uint256 tokenInAmount,
-        uint256 tokenOutAmount,
-        bytes calldata data
-    ) external override {
-        require(tokenOutAmount != 0, "We must be loaning Y!");
-        require(tokenInAmount == 0, "We should not be loaning any X!");
-        (
-            address[] memory factoriesSupportingTokenPair,
-            uint256[] memory routingAmountsToSendToAmms,
-            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            address whereToRepayLoan
-        ) = abi.decode(
-                data,
-                (address[], uint256[], Structs.AmountsToSendToAmm[], address)
-            );
-        //TODO: make sure that tokenIn and tokenOut are the right way around
-        IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
-        // tokenIn will be treated as X
-        address tokenIn = pair.token0();
-        // tokenIn will be treated as Y
-        address tokenOut = pair.token1();
-        assert(
-            msg.sender ==
-                IUniswapV2Factory(_UNIV2_FACTORY_ADDRESS).getPair(
-                    tokenIn,
-                    tokenOut
-                )
-        ); // ensure that msg.sender is a V2 pair
-
-        //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
-        for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
-            if (routingAmountsToSendToAmms[i] != 0) {
-                TransferHelper.safeTransfer(
-                    tokenIn,
-                    msg.sender,
-                    routingAmountsToSendToAmms[i]
-                );
-            }
-        }
-
-        for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-            if (arbitrageAmountsToSendToAmms[i].x != 0) {
-                TransferHelper.safeTransfer(
-                    tokenOut,
-                    msg.sender,
-                    arbitrageAmountsToSendToAmms[i].y
-                );
-            }
-        }
-
-        uint256 ySum = 0;
-        Structs.Amm memory temp = Structs.Amm(0, 0);
-        for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-            if (arbitrageAmountsToSendToAmms[i].x != 0) {
-                (temp.x, temp.y) = getReserves(
-                    factoriesSupportingTokenPair[i],
-                    tokenIn,
-                    tokenOut
-                );
-                ySum += SharedFunctions.quantityOfYForX(
-                    temp,
-                    arbitrageAmountsToSendToAmms[i].x
-                );
-                TransferHelper.safeTransfer(
-                    tokenIn,
-                    msg.sender,
-                    arbitrageAmountsToSendToAmms[i].x
-                );
-            }
-        }
-        //TODO: check if this is the correct formula for interest on the loan
-        uint256 returnLoan = (tokenOutAmount * 1003) / 1000;
-
-        TransferHelper.safeTransfer(
-            tokenOut,
-            whereToRepayLoan,
-            ySum - returnLoan
+    uint256 yGross = 0;
+    for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
+      if (arbitrageAmountsToSendToAmms[i].x != 0) {
+        yGross += executeSwap(
+          factoriesSupportingTokenPair[i],
+          tokenIn,
+          tokenOut,
+          arbitrageAmountsToSendToAmms[i].x
         );
+      }
     }
+
+   }
+    //TODO: check if this is the correct formula for interest on the loan
+    // uint256 returnLoan = (tokenOutAmount * 1003) / 1000;
+    
+      //return the loan
+      TransferHelper.safeTransfer(
+        tokenOut,
+        whereToRepayLoan,
+        amount0Out + amount1Out
+      );
+    
+    assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
+    assert(
+      IERC20(tokenOut).balanceOf(address(this)) ==
+        yGross - amount0Out - amount1Out
+    );
+  }
 }
