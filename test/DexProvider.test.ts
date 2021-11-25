@@ -9,9 +9,13 @@ import {
 import { quantityOfYForX } from "../scripts/utils/math";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
+import deployContract from "../scripts/utils/deploy";
 describe("==================================== DexProvider ====================================", function () {
   before(async function () {
-    this.DexProvider = await ethers.getContractFactory("DexProvider");
+    const sharedFunctionsAddress = await deployContract("SharedFunctions");
+    this.DexProvider = await ethers.getContractFactory("DexProvider", {
+      libraries: { SharedFunctions: sharedFunctionsAddress },
+    });
   });
   beforeEach(async function () {
     this.dexProvider = await this.DexProvider.deploy();
