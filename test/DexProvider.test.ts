@@ -12,17 +12,14 @@ import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== DexProvider ====================================", function () {
   before(async function () {
-    const sharedFunctionsAddress = await deployContract("SharedFunctions");
-    this.DexProvider = await ethers.getContractFactory("DexProvider", {
-      libraries: { SharedFunctions: sharedFunctionsAddress },
-    });
+    this.DexProvider = await ethers.getContractFactory("DexProvider");
   });
   beforeEach(async function () {
     this.dexProvider = await this.DexProvider.deploy();
     await this.dexProvider.deployed();
   });
 
-  it("ReserveFeed fetches coorrect reserves", async function () {
+  it("ReserveFeed fetches correct reserves", async function () {
     let [reserveIn, reserveOut] = await this.dexProvider.getReserves(
       factoryToAddress[Factory.SUSHI],
       tokenToAddress[Token.WETH],
