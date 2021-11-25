@@ -1,7 +1,12 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
-import {TEN_TO_18, toStringMap, whatPrecision, calculateRatio} from "./HelperFunctions";
+import {
+  TEN_TO_18,
+  toStringMap,
+  whatPrecision,
+  calculateRatio,
+} from "../scripts/utils/math";
 
 describe("==================================== Arbitrage ====================================", function () {
   before(async function () {
@@ -35,11 +40,10 @@ describe("==================================== Arbitrage =======================
         [toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18])],
         `${0.0031 * TEN_TO_18}`
       );
-    }
-    catch(error){
+    } catch (error) {
       throwsError = true;
     }
-    expect(throwsError).to.equal(true)
+    expect(throwsError).to.equal(true);
   });
 
   it("Arbitrage runs when exactly two AMMs supplied (edge case)", async function () {
