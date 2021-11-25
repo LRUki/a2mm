@@ -1,7 +1,7 @@
 import deployContract from "../scripts/utils/deploy";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import {TEN_TO_18, toStringMap} from "./HelperFunctions";
+import { TEN_TO_18, toStringMap } from "../scripts/utils/math";
 
 describe("==================================== Route ====================================", function () {
   before(async function () {
@@ -18,12 +18,8 @@ describe("==================================== Route ===========================
   it("Routing with no AMMs causes error", async function () {
     var throwsError = false;
     try {
-      await this.route.routeWrapper(
-        [],
-        `${0.4 * TEN_TO_18}`
-      );
-    }
-    catch(error){
+      await this.route.routeWrapper([], `${0.4 * TEN_TO_18}`);
+    } catch (error) {
       throwsError = true;
     }
     expect(throwsError).to.equal(true);
@@ -31,13 +27,13 @@ describe("==================================== Route ===========================
 
   it("When only one Amm is supplied for routing -> normal swap", async function () {
     const amm = await this.route.routeWrapper(
-      [
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-      ],
+      [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
       `${0.4 * TEN_TO_18}`
     );
     const exp = 6649991662 * Math.pow(10, 8);
-    expect(Math.round((amm[1]-exp)/(Math.pow(10,8))).toString()).to.equal((0).toString());
+    expect(Math.round((amm[1] - exp) / Math.pow(10, 8)).toString()).to.equal(
+      (0).toString()
+    );
   });
 
   it("if you don't sell enough x to level two Amms, swap only on one of them", async function () {
@@ -49,7 +45,9 @@ describe("==================================== Route ===========================
       `${0.4 * TEN_TO_18}`
     );
     const exp = 6649991662 * Math.pow(10, 8);
-    expect(Math.round((amm[1]-exp)/(Math.pow(10,8))).toString()).to.equal((0).toString());
+    expect(Math.round((amm[1] - exp) / Math.pow(10, 8)).toString()).to.equal(
+      (0).toString()
+    );
   });
 
   it("check that the sum of amount to spend on different amms eguals to amount spent", async function () {
@@ -65,7 +63,7 @@ describe("==================================== Route ===========================
     );
     var sum = BigInt(0);
     for (let i = 0; i < amm[0].length; i++) {
-        sum += BigInt(amm[0][i])
+      sum += BigInt(amm[0][i]);
     }
 
     expect(Math.abs(Number(sum) - Number(xToSpend))).to.lessThan(10);

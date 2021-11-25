@@ -12,7 +12,7 @@ import {
   TEN_TO_9,
   toStringMap,
   whatPrecision,
-} from "./HelperFunctions";
+} from "../scripts/utils/math";
 
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== Swap ====================================", function () {
