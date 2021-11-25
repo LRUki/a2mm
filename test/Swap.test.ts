@@ -189,43 +189,64 @@ describe("==================================== Swap Helpers ====================
 });
 
 describe("==================================== Swap ====================================", async () => {
+  before(async function () {
+    this.SharedFunctions = await ethers.getContractFactory("SharedFunctions");
+  });
+  beforeEach(async function () {
+    this.sharedFunctions = await this.SharedFunctions.deploy();
+    await this.sharedFunctions.deployed();
+  });
+
   var swapTestCases: [number, string[], number, BigNumber][] = [];
 
   for (let i = 0; i < 10; i++) {
     let elem: [number, string[], number, BigNumber] = [
-      Number(13679900 + i),
+      Number(13679900 + 100*i),
       [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
       1,
       ethers.utils.parseEther("0.1"),
-    ] 
-    console.log(Number(13679900 + i))
+    ]
     swapTestCases.push(elem)
   }
 
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
       swapTestCase;
-    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async () => {
+    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async function () {
       const swapContract = await forkAndDeploy(blockNumber);
       const [signer] = await ethers.getSigners();
 
-      let [reserveIn, reserveOut] = await swapContract.getReserves(
+      ////////////////UNIV2
+      let [reserveInUNIV2, reserveOutUNIV2] = await swapContract.getReserves(
         factoryToAddress[Factory.UNIV2],
         tokenIn,
         tokenOut
       );
       console.log(`reserves of ${tokenIn}, ${tokenOut} at UNIV2 are`, [
-        reserveIn.toString(),
-        reserveOut.toString(),
+        reserveInUNIV2.toString(),
+        reserveOutUNIV2.toString(),
       ]);
-      [reserveIn, reserveOut] = await swapContract.getReserves(
+      
+      ////////////////SHIBA
+      let [reserveInSHIBA, reserveOutSHIBA] = await swapContract.getReserves(
         factoryToAddress[Factory.SHIBA],
         tokenIn,
         tokenOut
       );
       console.log(`reserves of ${tokenIn}, ${tokenOut} at SHIBA are`, [
-        reserveIn.toString(),
-        reserveOut.toString(),
+        reserveInSHIBA.toString(),
+        reserveOutSHIBA.toString(),
+      ]);
+
+      ////////////////SUSHI
+      let [reserveInSUSHI, reserveOutSUSHI] = await swapContract.getReserves(
+        factoryToAddress[Factory.SUSHI],
+        tokenIn,
+        tokenOut
+      );
+      console.log(`reserves of ${tokenIn}, ${tokenOut} at SUSHI are`, [
+        reserveInSUSHI.toString(),
+        reserveOutSUSHI.toString(),
       ]);
 
       //test
@@ -240,14 +261,28 @@ describe("==================================== Swap ============================
 
       //call the swap
       swapContract.swap(tokenIn,tokenOut, inputAmount)
-
+      console.log("--------Input --------")
+      console.log(inputAmount)
       //check the balanceOf the user etc
-      console.log("--------Balance--------")
-      let balance_res = await getBalanceOfERC20(signer.address, tokenOut)
-      console.log(balance_res)
-      console.log("--------QuantityOfYForX--------")
-      let quantityOfYForX_res = await quantityOfYForX(BigInt(reserveIn),BigInt(reserveOut),BigInt(inputAmount)).toString
-      console.log(quantityOfYForX_res)
+      // console.log("--------Balance--------")
+      // let balance_res = await getBalanceOfERC20(signer.address, tokenOut)
+      // console.log(balance_res)
+      // console.log("--------QuantityOfYForX--------")
+      // const quantityOfYForXSmartContract = async (
+      //   x: bigint,
+      //   y: bigint,
+      //   dx: bigint
+      // ) =>
+      //   this.sharedFunctions.functions[
+      //     "quantityOfYForX(uint256,uint256,uint256)"
+      //   ](x, y, dx);
+
+      // const quantityOfYForX_res = await quantityOfYForXSmartContract(
+      //   BigInt(reserveInSUSHI),
+      //   BigInt(reserveOutSUSHI),
+      //   BigInt(100)
+      // );
+      // console.log(quantityOfYForX_res)
     });
   });
 });
