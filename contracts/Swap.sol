@@ -20,60 +20,7 @@ import "hardhat/console.sol";
 
 contract Swap is DexProvider {
     Structs.AmountsToSendToAmm[3] private _amountsToSendToAmm;
-
     event SwapEvent(uint256 amountIn, uint256 amountOut);
-
-    // @param tokenIn - the first token we are interested in; usually considered to be the token which the user is putting in
-    // @param tokenOut - the second token we are interested in; usually considered to be the token which the user wants to get back
-    // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
-    // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
-    function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
-        private
-        view
-        returns (
-            address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
-        )
-    {
-        uint256 noFactoriesSupportingTokenPair = 0;
-        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
-            if (
-                IUniswapV2Factory(_factoryAddresses[i]).getPair(
-                    tokenIn,
-                    tokenOut
-                ) != address(0x0)
-            ) {
-                noFactoriesSupportingTokenPair++;
-            }
-        }
-
-        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
-        factoriesSupportingTokenPair = new address[](
-            noFactoriesSupportingTokenPair
-        );
-        uint256 j = 0;
-        for (
-            uint256 i = 0;
-            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
-            i++
-        ) {
-            if (
-                IUniswapV2Factory(_factoryAddresses[i]).getPair(
-                    tokenIn,
-                    tokenOut
-                ) != address(0x0)
-            ) {
-                (amms[j].x, amms[j].y) = getReserves(
-                    _factoryAddresses[i],
-                    tokenIn,
-                    tokenOut
-                );
-                factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
-            }
-        }
-
-        return (factoriesSupportingTokenPair, amms);
-    }
 
     function swap(
         address tokenIn,
@@ -89,7 +36,7 @@ contract Swap is DexProvider {
             Structs.Amm[] memory amms
         ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
 
-        console.log(amms[0].x, amms[0].y, "UNI RESERVE: WETH:TOKE");
+        require(factoriesSupportingTokenPair.length > 0, "no amms avilable");
 
         (
             uint256[] memory routingAmountsToSendToAmms,
@@ -97,44 +44,40 @@ contract Swap is DexProvider {
             uint256 amountOfYtoFlashLoan,
             uint256 whereToLoanIndex
         ) = calculateRouteAndArbitarge(amms, amountIn);
-        console.log(amountOfYtoFlashLoan, "<- loan amount");
-        for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
-            _amountsToSendToAmm[i].x =
-                arbitrageAmountsToSendToAmms[i].x +
-                routingAmountsToSendToAmms[i];
-            _amountsToSendToAmm[i].y = arbitrageAmountsToSendToAmms[i].y;
+
+        uint256 ySum = 0;
+        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
+            ySum += arbitrageAmountsToSendToAmms[i].y;
         }
 
-        uint256 yToLoan = 0;
-        for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
-            console.log(_amountsToSendToAmm[i].x, "XXXX");
-
-            yToLoan += arbitrageAmountsToSendToAmms[i].y;
-        }
-
-        console.log(yToLoan, "TOLOAN");
-        console.log(amountIn, "AmountIN");
         //handle integer division error
         uint256 amountOut = 0;
-        if (yToLoan > 0) {
+        if (ySum > 0) {
             //TODO: how to get the amountOut from flashSwap?
-            console.log("FLASH");
-
+            console.log("Arbitarge (requires flashswap anyway) ");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
-            flashSwap(tokenIn, tokenOut, yToLoan, whereToLoan, factoriesSupportingTokenPair, routingAmountsToSendToAmms, arbitrageAmountsToSendToAmms);
+            flashSwap(
+                tokenIn,
+                tokenOut,
+                ySum,
+                whereToLoan,
+                factoriesSupportingTokenPair,
+                routingAmountsToSendToAmms,
+                arbitrageAmountsToSendToAmms
+            );
         } else {
-            console.log("NO FLASH");
-            for (uint256 i = 0; i < _amountsToSendToAmm.length; ++i) {
-                //TODO: the 'require' below this is fishy... it's possible that the user had enough of Y for the arbitrage, and hence doesn't need a flash loan, but is still arbitraging and hence transferring Y for X
-                require(_amountsToSendToAmm[i].y == 0, "y should be 0");
-                if (_amountsToSendToAmm[i].x > 0) {
+            console.log("only Routing");
+            for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
+                uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
+                    routingAmountsToSendToAmms[i];
+                if (xToSend > 0) {
                     amountOut += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        _amountsToSendToAmm[i].x
+                        xToSend
                     );
                 }
             }

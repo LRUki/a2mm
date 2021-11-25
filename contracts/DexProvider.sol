@@ -90,6 +90,58 @@ contract DexProvider is IUniswapV2Callee {
         return amountOut;
     }
 
+    // @param tokenIn - the first token we are interested in; usually considered to be the token which the user is putting in
+    // @param tokenOut - the second token we are interested in; usually considered to be the token which the user wants to get back
+    // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
+    // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
+    function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
+        internal
+        view
+        returns (
+            address[] memory factoriesSupportingTokenPair,
+            Structs.Amm[] memory amms
+        )
+    {
+        uint256 noFactoriesSupportingTokenPair = 0;
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
+            if (
+                IUniswapV2Factory(_factoryAddresses[i]).getPair(
+                    tokenIn,
+                    tokenOut
+                ) != address(0x0)
+            ) {
+                noFactoriesSupportingTokenPair++;
+            }
+        }
+
+        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        factoriesSupportingTokenPair = new address[](
+            noFactoriesSupportingTokenPair
+        );
+        uint256 j = 0;
+        for (
+            uint256 i = 0;
+            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
+            i++
+        ) {
+            if (
+                IUniswapV2Factory(_factoryAddresses[i]).getPair(
+                    tokenIn,
+                    tokenOut
+                ) != address(0x0)
+            ) {
+                (amms[j].x, amms[j].y) = getReserves(
+                    _factoryAddresses[i],
+                    tokenIn,
+                    tokenOut
+                );
+                factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
+            }
+        }
+
+        return (factoriesSupportingTokenPair, amms);
+    }
+
     function flashSwap(
         address tokenIn,
         address tokenOut,
@@ -111,12 +163,7 @@ contract DexProvider is IUniswapV2Callee {
             whereToLoan
         );
 
-        IUniswapV2Pair(pairAddress).swap(
-            0,
-            yToLoan,
-            address(this),
-            data
-        );
+        IUniswapV2Pair(pairAddress).swap(0, yToLoan, address(this), data);
     }
 
     function uniswapV2Call(
@@ -128,14 +175,14 @@ contract DexProvider is IUniswapV2Callee {
         require(tokenOutAmount != 0, "We must be loaning Y!");
         require(tokenInAmount == 0, "We should not be loaning any X!");
         (
-        address[] memory factoriesSupportingTokenPair,
-        uint256[] memory routingAmountsToSendToAmms,
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-        address whereToRepayLoan
+            address[] memory factoriesSupportingTokenPair,
+            uint256[] memory routingAmountsToSendToAmms,
+            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
+            address whereToRepayLoan
         ) = abi.decode(
-            data,
-            (address[], uint256[], Structs.AmountsToSendToAmm[], address)
-        );
+                data,
+                (address[], uint256[], Structs.AmountsToSendToAmm[], address)
+            );
         //TODO: make sure that tokenIn and tokenOut are the right way around
         IUniswapV2Pair pair = IUniswapV2Pair(msg.sender);
         // tokenIn will be treated as X
@@ -153,13 +200,21 @@ contract DexProvider is IUniswapV2Callee {
         //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
         for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
             if (routingAmountsToSendToAmms[i] != 0) {
-                TransferHelper.safeTransfer(tokenIn, msg.sender, routingAmountsToSendToAmms[i]);
+                TransferHelper.safeTransfer(
+                    tokenIn,
+                    msg.sender,
+                    routingAmountsToSendToAmms[i]
+                );
             }
         }
 
         for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
             if (arbitrageAmountsToSendToAmms[i].x != 0) {
-                TransferHelper.safeTransfer(tokenOut, msg.sender, arbitrageAmountsToSendToAmms[i].y);
+                TransferHelper.safeTransfer(
+                    tokenOut,
+                    msg.sender,
+                    arbitrageAmountsToSendToAmms[i].y
+                );
             }
         }
 
@@ -167,14 +222,29 @@ contract DexProvider is IUniswapV2Callee {
         Structs.Amm memory temp = Structs.Amm(0, 0);
         for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
             if (arbitrageAmountsToSendToAmms[i].x != 0) {
-                (temp.x, temp.y) = getReserves(factoriesSupportingTokenPair[i], tokenIn, tokenOut);
-                ySum += SharedFunctions.quantityOfYForX(temp, arbitrageAmountsToSendToAmms[i].x);
-                TransferHelper.safeTransfer(tokenIn, msg.sender, arbitrageAmountsToSendToAmms[i].x);
+                (temp.x, temp.y) = getReserves(
+                    factoriesSupportingTokenPair[i],
+                    tokenIn,
+                    tokenOut
+                );
+                ySum += SharedFunctions.quantityOfYForX(
+                    temp,
+                    arbitrageAmountsToSendToAmms[i].x
+                );
+                TransferHelper.safeTransfer(
+                    tokenIn,
+                    msg.sender,
+                    arbitrageAmountsToSendToAmms[i].x
+                );
             }
         }
         //TODO: check if this is the correct formula for interest on the loan
-        uint256 returnLoan = tokenOutAmount * 1003 / 1000;
+        uint256 returnLoan = (tokenOutAmount * 1003) / 1000;
 
-        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, ySum - returnLoan);
+        TransferHelper.safeTransfer(
+            tokenOut,
+            whereToRepayLoan,
+            ySum - returnLoan
+        );
     }
 }
