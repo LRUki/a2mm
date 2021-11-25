@@ -12,12 +12,14 @@ import {
   TEN_TO_9,
   toStringMap,
   whatPrecision,
+  quantityOfYForX,
 } from "../scripts/utils/math";
 import forkAndDeploy from "../scripts/utils/forkAndDeploy";
 
 import deployContract from "../scripts/utils/deploy";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
+import { Console } from "console";
 
 describe("==================================== Swap Helpers ====================================", function () {
   before(async function () {
@@ -187,26 +189,18 @@ describe("==================================== Swap Helpers ====================
 });
 
 describe("==================================== Swap ====================================", async () => {
-  const swapTestCases: [number, string[], number, BigNumber][] = [
-    [
-      13679800,
+  var swapTestCases: [number, string[], number, BigNumber][] = [];
+
+  for (let i = 0; i < 10; i++) {
+    let elem: [number, string[], number, BigNumber] = [
+      Number(13679900 + i),
       [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
-      0.1,
+      1,
       ethers.utils.parseEther("0.1"),
-    ],
-    [
-      13679900,
-      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
-      0.1,
-      ethers.utils.parseEther("0.1"),
-    ],
-    [
-      13680100,
-      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
-      0.1,
-      ethers.utils.parseEther("0.1"),
-    ],
-  ];
+    ] 
+    console.log(Number(13679900 + i))
+    swapTestCases.push(elem)
+  }
 
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
@@ -245,10 +239,15 @@ describe("==================================== Swap ============================
       );
 
       //call the swap
-      //swapContract.swap()
+      swapContract.swap(tokenIn,tokenOut, inputAmount)
 
       //check the balanceOf the user etc
-      // getBalanceOfERC20(signer.address, tokenOut);
+      console.log("--------Balance--------")
+      let balance_res = await getBalanceOfERC20(signer.address, tokenOut)
+      console.log(balance_res)
+      console.log("--------QuantityOfYForX--------")
+      let quantityOfYForX_res = await quantityOfYForX(BigInt(reserveIn),BigInt(reserveOut),BigInt(inputAmount)).toString
+      console.log(quantityOfYForX_res)
     });
   });
 });
