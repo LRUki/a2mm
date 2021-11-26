@@ -15,6 +15,10 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
+import "@uniswap/v2-periphery/contracts/interfaces/V1/IUniswapV1Exchange.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
+
 import "hardhat/console.sol";
 
 contract DexProvider is IUniswapV2Callee {

@@ -114,7 +114,7 @@ contract Swap is DexProvider {
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
             uint256 flashLoanRequired,
-            uint256 whereToLoanIndex
+
         ) = calculateRouteAndArbitarge(amms0, amountIn);
         for (uint256 i = 0; i < amms0.length; i++) {
             totalOut += SharedFunctions.quantityOfYForX(
@@ -189,7 +189,6 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](1);
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
-            Structs.AmountsToSendToAmm[] memory arbitrages;
             (
                 arbitrageAmountsToSendToAmms,
                 amountOfYtoFlashLoan,
