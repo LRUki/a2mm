@@ -199,7 +199,7 @@ describe("==================================== Swap ============================
 
   var swapTestCases: [number, string[], number, BigNumber][] = [];
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 4; i < 5; i++) {
     let elem: [number, string[], number, BigNumber] = [
       Number(13679900 + 100*i),
       [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
@@ -213,7 +213,7 @@ describe("==================================== Swap ============================
     const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
       swapTestCase;
     it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async function () {
-      console.log();
+      console.log("block number: ", blockNumber);
       const swapContract = await forkAndDeploy(blockNumber);
       const [signer] = await ethers.getSigners();
 
@@ -261,7 +261,8 @@ describe("==================================== Swap ============================
       );
 
       //call the swap
-      swapContract.swap(tokenIn,tokenOut, inputAmount)
+      console.log("Before calling 'swap':");
+      await swapContract.swap(tokenIn, tokenOut, inputAmount)
       console.log("--------Input --------")
       console.log(inputAmount)
       //check the balanceOf the user etc
@@ -284,10 +285,11 @@ describe("==================================== Swap ============================
       //   BigInt(100)
       // );
       // console.log(quantityOfYForX_res)
+      console.log("========================== TEST END ========================================");
     });
   });
 });
 
-function sleep(time: number) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}
+// function sleep(time: number) {
+//   return new Promise((resolve) => setTimeout(resolve, time));
+// }

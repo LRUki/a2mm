@@ -54,7 +54,7 @@ contract Swap is DexProvider {
         uint256 amountOut = 0;
         if (ySum > 0) {
             //TODO: how to get the amountOut from flashSwap?
-            console.log("Arbitarge (requires flashswap anyway)");
+            console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];

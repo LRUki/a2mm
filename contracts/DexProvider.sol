@@ -59,33 +59,41 @@ contract DexProvider is IUniswapV2Callee {
         address tokenOut,
         uint256 amountIn
     ) public returns (uint256 amountOut) {
+        console.log("Inside executeSwap() - start");
         address pairAddress = IUniswapV2Factory(factoryAddress).getPair(
             tokenIn,
             tokenOut
         );
+        console.log("Inside executeSwap() - 1");
         require(pairAddress != address(0), "This pool does not exist");
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
             .getReserves();
+        console.log("Inside executeSwap() - 2");
         (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
             ? (reserve0, reserve1)
             : (reserve1, reserve0);
+        console.log("Inside executeSwap() - 3");
         amountOut = UniswapV2Library.getAmountOut(
             amountIn,
             reserveIn,
             reserveOut
         );
+        console.log("Inside executeSwap() - 4");
         IERC20(tokenIn).transfer(pairAddress, amountIn);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), amountOut)
             : (amountOut, uint256(0));
+        console.log("Inside executeSwap() - 5");
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
             new bytes(0)
         );
+        console.log("Inside executeSwap() - 6");
         emit ExecuteSwapEvent(amountIn, amountOut);
+        console.log("Inside executeSwap() - end");
         return amountOut;
     }
 
@@ -163,6 +171,9 @@ contract DexProvider is IUniswapV2Callee {
             arbitrageAmountsToSendToAmms,
             whereToLoan
         );
+
+        console.log("Inside flashSwap()");
+
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), yToLoan)
             : (yToLoan, uint256(0));
@@ -180,6 +191,7 @@ contract DexProvider is IUniswapV2Callee {
         uint256 amount1Out,
         bytes calldata data
     ) external override {
+        console.log("Inside uniswapV2Call() - start");
         require(
             (amount0Out > 0 && amount1Out == 0) ||
                 (amount0Out == 0 && amount1Out > 0),
@@ -193,6 +205,7 @@ contract DexProvider is IUniswapV2Callee {
         uint256[] memory routingAmountsToSendToAmms;
         address[] memory factoriesSupportingTokenPair;
         uint256 yGross = 0;
+        console.log("Inside uniswapV2Call() - 1");
         {
             (
                 factoriesSupportingTokenPair,
@@ -203,6 +216,7 @@ contract DexProvider is IUniswapV2Callee {
                 data,
                 (address[], uint256[], Structs.AmountsToSendToAmm[], address)
             );
+            console.log("Inside uniswapV2Call() - 2");
 
             address token0 = IUniswapV2Pair(msg.sender).token0();
             address token1 = IUniswapV2Pair(msg.sender).token1();
@@ -210,14 +224,17 @@ contract DexProvider is IUniswapV2Callee {
                 msg.sender ==
                     IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
             );
+            console.log("Inside uniswapV2Call() - 3");
 
             (tokenIn, tokenOut) = amount0Out == 0
                 ? (token0, token1)
                 : (token1, token0);
 
+            console.log("Inside uniswapV2Call() - 4");
             //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
             for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
                 if (routingAmountsToSendToAmms[i] != 0) {
+                    console.log("after 4, 'i' = %s", i);
                     executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
@@ -226,6 +243,7 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
+            console.log("Inside uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
@@ -237,6 +255,7 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
+            console.log("Inside uniswapV2Call() - 6");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].x != 0) {
@@ -248,6 +267,7 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
+            console.log("Inside uniswapV2Call() - 7");
         }
         //TODO: check if this is the correct formula for interest on the loan
         // uint256 returnLoan = (tokenOutAmount * 1003) / 1000;
@@ -258,11 +278,13 @@ contract DexProvider is IUniswapV2Callee {
             whereToRepayLoan,
             amount0Out + amount1Out
         );
+        console.log("Inside uniswapV2Call() - 8");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
         assert(
             IERC20(tokenOut).balanceOf(address(this)) ==
                 yGross - amount0Out - amount1Out
         );
+        console.log("Inside uniswapV2Call() - end");
     }
 }
