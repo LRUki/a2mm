@@ -6,7 +6,6 @@ import {
   convertEthToWETH,
   sendERC20,
 } from "../scripts/utils/ERC20";
-import { quantityOfYForX } from "../scripts/utils/math";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
 describe("==================================== DexProvider ====================================", function () {
@@ -37,7 +36,7 @@ describe("==================================== DexProvider =====================
 
   it("executes swap", async function () {
     const [signer] = await ethers.getSigners();
-    const ethAmout = "0.1";
+    const ethAmout = ethers.utils.parseEther("0.1");
     const tokenIn = tokenToAddress[Token.WETH];
     const tokenOut = tokenToAddress[Token.UNI];
 
@@ -53,7 +52,7 @@ describe("==================================== DexProvider =====================
       factoryToAddress[Factory.SUSHI],
       tokenIn,
       tokenOut,
-      ethers.utils.parseEther(ethAmout).toString()
+      ethAmout.toString()
     );
     const txStatus = await tx.wait();
     const executeSwapEvent = txStatus.events.filter(

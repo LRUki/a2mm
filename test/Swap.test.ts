@@ -68,17 +68,13 @@ describe("==================================== Swap Helpers ====================
 
   it("swaps on differnt route", async function () {
     const [signer] = await ethers.getSigners();
-    const ethAmout = "1";
+    const ethAmout = ethers.utils.parseEther("1");
     const tokenIn = tokenToAddress[Token.WETH];
     const tokenOut = tokenToAddress[Token.UNI];
 
     //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
     await topUpWETHAndApproveContractToUse(signer, ethAmout, this.swap.address);
-    const tx = await this.swap.swap(
-      tokenIn,
-      tokenOut,
-      ethers.utils.parseEther(ethAmout).toString()
-    );
+    const tx = await this.swap.swap(tokenIn, tokenOut, ethAmout.toString());
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
       (e: { event: string; args: string[] }) => e.event == "SwapEvent"
@@ -197,16 +193,16 @@ describe("==================================== Swap ============================
     await this.sharedFunctions.deployed();
   });
 
-  var swapTestCases: [number, string[], number, BigNumber][] = [];
+  var swapTestCases: [number, string[], BigNumber, BigNumber][] = [];
 
   for (let i = 0; i < 10; i++) {
-    let elem: [number, string[], number, BigNumber] = [
-      Number(13679900 + 100*i),
+    let elem: [number, string[], BigNumber, BigNumber] = [
+      Number(13679900 + 100 * i),
       [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
-      1,
+      ethers.utils.parseEther("0.05"),
       ethers.utils.parseEther("0.1"),
-    ]
-    swapTestCases.push(elem)
+    ];
+    swapTestCases.push(elem);
   }
 
   swapTestCases.forEach((swapTestCase, i) => {
@@ -226,7 +222,7 @@ describe("==================================== Swap ============================
         reserveInUNIV2.toString(),
         reserveOutUNIV2.toString(),
       ]);
-      
+
       ////////////////SHIBA
       let [reserveInSHIBA, reserveOutSHIBA] = await swapContract.getReserves(
         factoryToAddress[Factory.SHIBA],
@@ -255,14 +251,14 @@ describe("==================================== Swap ============================
       //assuming that tokenIn is WETH
       await topUpWETHAndApproveContractToUse(
         signer,
-        `${inputAmount}`,
+        inputAmount,
         swapContract.address
       );
 
       //call the swap
-      swapContract.swap(tokenIn,tokenOut, inputAmount)
-      console.log("--------Input --------")
-      console.log(inputAmount)
+      swapContract.swap(tokenIn, tokenOut, inputAmount);
+      console.log("--------Input --------");
+      console.log(inputAmount.toString());
       //check the balanceOf the user etc
       // console.log("--------Balance--------")
       // let balance_res = await getBalanceOfERC20(signer.address, tokenOut)
