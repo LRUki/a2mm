@@ -1,10 +1,10 @@
 export enum Token {
-  WETH,
-  UNI,
-  DAI,
-  USDT,
-  AXS,
-  TOKE,
+  WETH = "WETH",
+  UNI = "UNI",
+  DAI = "DAI",
+  USDT = "USDT",
+  AXS = "AXS",
+  TOKE = "TOKE",
 }
 
 export const tokenToDecimal = {

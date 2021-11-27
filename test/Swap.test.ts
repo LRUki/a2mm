@@ -19,7 +19,6 @@ import forkAndDeploy from "../scripts/utils/forkAndDeploy";
 import deployContract from "../scripts/utils/deploy";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
-import { Console } from "console";
 
 describe("==================================== Swap Helpers ====================================", function () {
   before(async function () {
@@ -69,21 +68,27 @@ describe("==================================== Swap Helpers ====================
   it("swaps on differnt route", async function () {
     const [signer] = await ethers.getSigners();
     const ethAmout = ethers.utils.parseEther("1");
-    const tokenIn = tokenToAddress[Token.WETH];
-    const tokenOut = tokenToAddress[Token.UNI];
+    const tokenIn = Token.WETH;
+    const tokenOut = Token.UNI;
 
     //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
     await topUpWETHAndApproveContractToUse(signer, ethAmout, this.swap.address);
-    const tx = await this.swap.swap(tokenIn, tokenOut, ethAmout.toString());
+    const tx = await this.swap.swap(
+      tokenToAddress[tokenIn],
+      tokenToAddress[tokenOut],
+      ethAmout
+    );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
       (e: { event: string; args: string[] }) => e.event == "SwapEvent"
     );
     expect(swapEvent).to.have.lengthOf(1);
     const { amountOut } = swapEvent[0].args;
-    const amountRecieved = await getBalanceOfERC20(signer.address, tokenOut);
-    console.log(amountRecieved.toString(), amountOut.toString(), "AHHHH");
-    // expect(amountRecieved.eq(amountOut)).to.be.true;
+    const amountRecieved = await getBalanceOfERC20(
+      signer.address,
+      tokenToAddress[tokenOut]
+    );
+    expect(amountRecieved.eq(amountOut)).to.be.true;
   });
 
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
@@ -185,104 +190,94 @@ describe("==================================== Swap Helpers ====================
 });
 
 describe("==================================== Swap ====================================", async () => {
-  before(async function () {
-    this.SharedFunctions = await ethers.getContractFactory("SharedFunctions");
-  });
-  beforeEach(async function () {
-    this.sharedFunctions = await this.SharedFunctions.deploy();
-    await this.sharedFunctions.deployed();
-  });
+  type SwapTestCaseParam = [number, Token[], BigNumber, BigNumber];
+  type FactoryStat = {
+    factory: Factory;
+    reserveIn: BigNumber;
+    reserveOut: BigNumber;
+    amountIn: BigNumber;
+    amountOut: BigInt;
+  };
 
-  var swapTestCases: [number, string[], BigNumber, BigNumber][] = [];
-
+  const swapTestCases: SwapTestCaseParam[] = [];
   for (let i = 0; i < 10; i++) {
-    let elem: [number, string[], BigNumber, BigNumber] = [
+    swapTestCases.push([
       Number(13679900 + 100 * i),
-      [tokenToAddress[Token.WETH], tokenToAddress[Token.UNI]],
-      ethers.utils.parseEther("0.05"),
+      [Token.WETH, Token.UNI],
       ethers.utils.parseEther("0.1"),
-    ];
-    swapTestCases.push(elem);
+      ethers.utils.parseEther("0.1"),
+    ] as SwapTestCaseParam);
   }
 
   swapTestCases.forEach((swapTestCase, i) => {
-    const [blockNumber, [tokenIn, tokenOut], inputAmount, expectedOutput] =
+    const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
       swapTestCase;
-    it(`Test${i}: swapping ${inputAmount} of [${tokenIn}, ${tokenOut}] at block ${blockNumber}`, async function () {
+    it(`Test${i}: swapping ${ethers.utils.formatEther(
+      amountIn
+    )} ${tokenIn} => ${tokenOut} at block ${blockNumber}`, async () => {
       const swapContract = await forkAndDeploy(blockNumber);
       const [signer] = await ethers.getSigners();
 
-      ////////////////UNIV2
-      let [reserveInUNIV2, reserveOutUNIV2] = await swapContract.getReserves(
-        factoryToAddress[Factory.UNIV2],
-        tokenIn,
-        tokenOut
-      );
-      console.log(`reserves of ${tokenIn}, ${tokenOut} at UNIV2 are`, [
-        reserveInUNIV2.toString(),
-        reserveOutUNIV2.toString(),
-      ]);
+      const factoryStats: FactoryStat[] = [];
+      for (const factory of [Factory.UNIV2, Factory.SUSHI, Factory.SHIBA]) {
+        const [reserveIn, reserveOut]: BigNumber[] =
+          await swapContract.getReserves(
+            factoryToAddress[factory],
+            tokenToAddress[tokenIn],
+            tokenToAddress[tokenOut]
+          );
 
-      ////////////////SHIBA
-      let [reserveInSHIBA, reserveOutSHIBA] = await swapContract.getReserves(
-        factoryToAddress[Factory.SHIBA],
-        tokenIn,
-        tokenOut
-      );
-      console.log(`reserves of ${tokenIn}, ${tokenOut} at SHIBA are`, [
-        reserveInSHIBA.toString(),
-        reserveOutSHIBA.toString(),
-      ]);
-
-      ////////////////SUSHI
-      let [reserveInSUSHI, reserveOutSUSHI] = await swapContract.getReserves(
-        factoryToAddress[Factory.SUSHI],
-        tokenIn,
-        tokenOut
-      );
-      console.log(`reserves of ${tokenIn}, ${tokenOut} at SUSHI are`, [
-        reserveInSUSHI.toString(),
-        reserveOutSUSHI.toString(),
-      ]);
-
-      //test
+        factoryStats.push({
+          factory,
+          reserveIn,
+          reserveOut,
+          amountIn,
+          amountOut: quantityOfYForX(
+            reserveIn.toBigInt(),
+            reserveOut.toBigInt(),
+            amountIn.toBigInt()
+          ),
+        });
+      }
+      factoryStats.forEach((factoryStat) => {
+        const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
+        console.log(
+          `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
+        );
+      });
 
       //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
       //assuming that tokenIn is WETH
       await topUpWETHAndApproveContractToUse(
         signer,
-        inputAmount,
+        amountIn,
         swapContract.address
       );
 
       //call the swap
-      swapContract.swap(tokenIn, tokenOut, inputAmount);
-      console.log("--------Input --------");
-      console.log(inputAmount.toString());
-      //check the balanceOf the user etc
-      // console.log("--------Balance--------")
-      // let balance_res = await getBalanceOfERC20(signer.address, tokenOut)
-      // console.log(balance_res)
-      // console.log("--------QuantityOfYForX--------")
-      // const quantityOfYForXSmartContract = async (
-      //   x: bigint,
-      //   y: bigint,
-      //   dx: bigint
-      // ) =>
-      //   this.sharedFunctions.functions[
-      //     "quantityOfYForX(uint256,uint256,uint256)"
-      //   ](x, y, dx);
-
-      // const quantityOfYForX_res = await quantityOfYForXSmartContract(
-      //   BigInt(reserveInSUSHI),
-      //   BigInt(reserveOutSUSHI),
-      //   BigInt(100)
+      const tx = await swapContract.swap(
+        tokenToAddress[tokenIn],
+        tokenToAddress[tokenOut],
+        amountIn
+      );
+      const txStatus = await tx.wait();
+      //check event emitted?
+      // const swapEvent = txStatus.events.filter(
+      //   (e: { event: string; args: string[] }) => e.event == "SwapEvent"
       // );
-      // console.log(quantityOfYForX_res)
+      const userRecievedAmount: BigNumber = await getBalanceOfERC20(
+        signer.address,
+        tokenToAddress[tokenOut]
+      );
+      console.log(
+        `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
+      );
+
+      //TODO compare the userRecievedAmount against FactoryStat
     });
   });
 });
 
-function sleep(time: number) {
-  return new Promise((resolve) => setTimeout(resolve, time));
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
