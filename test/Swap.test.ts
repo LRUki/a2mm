@@ -208,6 +208,14 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+  for (let i = 0; i < 3; i++) {
+    swapTestCases.push([
+      Number(13679900 + 100 * i),
+      [Token.WETH, Token.SHIBA],
+      ethers.utils.parseEther("5"),
+      ethers.utils.parseEther("0.1"),
+    ] as SwapTestCaseParam);
+  }
 
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
