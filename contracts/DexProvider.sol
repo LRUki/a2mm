@@ -265,27 +265,23 @@ contract DexProvider is IUniswapV2Callee {
             console.log("Inside uniswapV2Call() - 6");
         }
         //TODO: check if this is the correct formula for interest on the loan; can we consider this when thinking about arbitrage opportunity?
-         uint256 returnLoan = ((amount0Out + amount1Out) * 1003) / 1000;
+        uint256 returnLoan = ((amount0Out + amount1Out) * 1003) / 1000;
 
         //return the loan
-        TransferHelper.safeTransfer(
-            tokenOut,
-            whereToRepayLoan,
-            returnLoan
-        );
+        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, returnLoan);
         console.log("Inside uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
-        assert(IERC20(tokenOut).balanceOf(address(this)) ==
-            yGross - returnLoan
+        assert(
+            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
         );
 
         //TODO: Return remaining amount to out contract/the user
-//        TransferHelper.safeTransfer(
-//            tokenOut,
-//            ,
-//            yGross - returnLoan
-//        );
+        //        TransferHelper.safeTransfer(
+        //            tokenOut,
+        //            ,
+        //            yGross - returnLoan
+        //        );
         console.log("Inside uniswapV2Call() - end");
     }
 }

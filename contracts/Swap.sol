@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-// solhint-disable-next-line
+//solhint-disable-next-line
 pragma solidity 0.6.6 || 0.8.3;
+//Solidity 0.8 already comes with ABIEncoderV2 out of the box; however, 0.6.6 doesn't.
 pragma experimental ABIEncoderV2;
 
 import "./libraries/Structs.sol";
@@ -83,7 +84,6 @@ contract Swap is DexProvider {
             }
         }
 
-        console.log(amountOut, IERC20(tokenOut).balanceOf(address(this)));
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
             "token failed to be sent back"
