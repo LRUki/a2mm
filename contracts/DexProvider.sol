@@ -220,6 +220,7 @@ contract DexProvider is IUniswapV2Callee {
                 data,
                 (address[], uint256[], Structs.AmountsToSendToAmm[], address)
             );
+            console.log("factoriesSupportingTokenPair.length = %s", factoriesSupportingTokenPair.length);
             console.log("Inside uniswapV2Call() - 2");
 
             address token0 = IUniswapV2Pair(msg.sender).token0();
@@ -238,6 +239,7 @@ contract DexProvider is IUniswapV2Callee {
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
+                    console.log("Y->X i = %s", i);
                     executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenOut,
@@ -249,7 +251,8 @@ contract DexProvider is IUniswapV2Callee {
             console.log("Inside uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                if (arbitrageAmountsToSendToAmms[i].x != 0) {
+                if (arbitrageAmountsToSendToAmms[i].x != 0 && factoriesSupportingTokenPair[i] != whereToRepayLoan) {
+                    console.log("X->Y i = %s", i);
                     yGross += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
