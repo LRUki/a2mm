@@ -60,7 +60,7 @@ describe("==================================== Swap Helpers ====================
       value: ethers.utils.parseEther(ethAmount),
     });
     const contractBalance = await signer.provider?.getBalance(
-      this.swap.address
+        this.swap.address
     );
     expect(contractBalance).to.equal(ethers.utils.parseEther(ethAmount));
   });
@@ -74,19 +74,19 @@ describe("==================================== Swap Helpers ====================
     //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
     await topUpWETHAndApproveContractToUse(signer, ethAmout, this.swap.address);
     const tx = await this.swap.swap(
-      tokenToAddress[tokenIn],
-      tokenToAddress[tokenOut],
-      ethAmout
+        tokenToAddress[tokenIn],
+        tokenToAddress[tokenOut],
+        ethAmout
     );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
-      (e: { event: string; args: string[] }) => e.event == "SwapEvent"
+        (e: { event: string; args: string[] }) => e.event == "SwapEvent"
     );
     expect(swapEvent).to.have.lengthOf(1);
     const { amountOut } = swapEvent[0].args;
     const amountRecieved = await getBalanceOfERC20(
-      signer.address,
-      tokenToAddress[tokenOut]
+        signer.address,
+        tokenToAddress[tokenOut]
     );
     expect(amountRecieved.eq(amountOut)).to.be.true;
   });
@@ -94,8 +94,8 @@ describe("==================================== Swap Helpers ====================
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
     let amountOfXToSend = 0.4 * TEN_TO_18;
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-      [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
-      `${amountOfXToSend}`
+        [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
+        `${amountOfXToSend}`
     );
     expect(amm[2]).to.equal(0);
     expect(amm[0][0]).to.equal(BigInt(amountOfXToSend));
@@ -111,8 +111,8 @@ describe("==================================== Swap Helpers ====================
       toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
     ];
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-      ammsArr,
-      `${0.0031 * TEN_TO_18}`
+        ammsArr,
+        `${0.0031 * TEN_TO_18}`
     );
 
     expect(amm[2].toString()).to.equal("0");
@@ -120,12 +120,12 @@ describe("==================================== Swap Helpers ====================
 
   it("Swapping lots of X means no flash loan required:", async function () {
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-      [
-        toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 5 * TEN_TO_18]),
-        toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
-      ],
-      `${100 * TEN_TO_18}`
+        [
+          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+          toStringMap([2 * TEN_TO_18, 5 * TEN_TO_18]),
+          toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+        ],
+        `${100 * TEN_TO_18}`
     );
     expect(amm[2].toString()).to.equal("0");
   });
@@ -134,8 +134,8 @@ describe("==================================== Swap Helpers ====================
     var throwsError = false;
     try {
       await this.swap.calculateRouteAndArbitargeWrapper(
-        [],
-        `${0.4 * TEN_TO_18}`
+          [],
+          `${0.4 * TEN_TO_18}`
       );
     } catch (error) {
       throwsError = true;
@@ -152,38 +152,38 @@ describe("==================================== Swap Helpers ====================
     ];
 
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-      ammsArr,
-      `${0.0031 * TEN_TO_18}`
+        ammsArr,
+        `${0.0031 * TEN_TO_18}`
     );
 
     let firstRatio = await calculateRatio(
-      Number(ammsArr[0][0]),
-      Number(ammsArr[0][1]),
-      Number(BigInt(amm[0][0]) + BigInt(amm[1][0].x)),
-      Number(amm[1][0].y)
+        Number(ammsArr[0][0]),
+        Number(ammsArr[0][1]),
+        Number(BigInt(amm[0][0]) + BigInt(amm[1][0].x)),
+        Number(amm[1][0].y)
     );
     for (let i = 1; i < ammsArr.length; i++) {
       let ratio = await calculateRatio(
-        Number(ammsArr[i][0]),
-        Number(ammsArr[i][1]),
-        Number(BigInt(amm[0][i]) + BigInt(amm[1][i].x)),
-        Number(amm[1][i].y)
+          Number(ammsArr[i][0]),
+          Number(ammsArr[i][1]),
+          Number(BigInt(amm[0][i]) + BigInt(amm[1][i].x)),
+          Number(amm[1][i].y)
       );
       expect(Math.abs(ratio - firstRatio)).to.lessThan(
-        Math.pow(10, whatPrecision(firstRatio, 2))
+          Math.pow(10, whatPrecision(firstRatio, 2))
       );
     }
   });
 
   it("Flash loan is required when we hold insufficient Y after routing", async function () {
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-      [
-        toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-        toStringMap([5 * TEN_TO_18, 200 * TEN_TO_18]),
-        toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
-      ],
-      `${2 * TEN_TO_9}`
+        [
+          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
+          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+          toStringMap([5 * TEN_TO_18, 200 * TEN_TO_18]),
+          toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
+        ],
+        `${2 * TEN_TO_9}`
     );
     expect(amm[2].toString()).to.not.equal("0");
   });
@@ -219,9 +219,9 @@ describe("==================================== Swap ============================
 
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
-      swapTestCase;
+        swapTestCase;
     it(`Test${i}: swapping ${ethers.utils.formatEther(
-      amountIn
+        amountIn
     )} ${tokenIn} => ${tokenOut} at block ${blockNumber}`, async () => {
       const swapContract = await forkAndDeploy(blockNumber);
       const [signer] = await ethers.getSigners();
@@ -229,11 +229,11 @@ describe("==================================== Swap ============================
       const factoryStats: FactoryStat[] = [];
       for (const factory of [Factory.UNIV2, Factory.SUSHI, Factory.SHIBA]) {
         const [reserveIn, reserveOut]: BigNumber[] =
-          await swapContract.getReserves(
-            factoryToAddress[factory],
-            tokenToAddress[tokenIn],
-            tokenToAddress[tokenOut]
-          );
+            await swapContract.getReserves(
+                factoryToAddress[factory],
+                tokenToAddress[tokenIn],
+                tokenToAddress[tokenOut]
+            );
 
         factoryStats.push({
           factory,
@@ -241,33 +241,33 @@ describe("==================================== Swap ============================
           reserveOut,
           amountIn,
           amountOut: quantityOfYForX(
-            reserveIn.toBigInt(),
-            reserveOut.toBigInt(),
-            amountIn.toBigInt()
+              reserveIn.toBigInt(),
+              reserveOut.toBigInt(),
+              amountIn.toBigInt()
           ),
         });
       }
       factoryStats.forEach((factoryStat) => {
         const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
         console.log(
-          `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
+            `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
         );
       });
 
       //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
       //assuming that tokenIn is WETH
       await topUpWETHAndApproveContractToUse(
-        signer,
-        amountIn,
-        swapContract.address
+          signer,
+          amountIn,
+          swapContract.address
       );
 
       console.log("calling swap");
       //call the swap
       const tx = await swapContract.swap(
-        tokenToAddress[tokenIn],
-        tokenToAddress[tokenOut],
-        amountIn
+          tokenToAddress[tokenIn],
+          tokenToAddress[tokenOut],
+          amountIn
       );
       console.log("after swap");
       const txStatus = await tx.wait();
@@ -276,11 +276,11 @@ describe("==================================== Swap ============================
       //   (e: { event: string; args: string[] }) => e.event == "SwapEvent"
       // );
       const userRecievedAmount: BigNumber = await getBalanceOfERC20(
-        signer.address,
-        tokenToAddress[tokenOut]
+          signer.address,
+          tokenToAddress[tokenOut]
       );
       console.log(
-        `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
+          `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
       );
 
       //TODO compare the userRecievedAmount against FactoryStat
