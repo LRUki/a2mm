@@ -235,19 +235,6 @@ contract DexProvider is IUniswapV2Callee {
                 : (token1, token0);
 
             console.log("Inside uniswapV2Call() - 4");
-            //TODO: we are doing more transactions than we have to, and hence paying a higher transaction fee. Implement it in the way that Liyi mentioned, where we can return the loan in both X and Y
-            for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
-                if (routingAmountsToSendToAmms[i] != 0) {
-                    console.log("after 4, 'i' = %s", i);
-                    executeSwap(
-                        factoriesSupportingTokenPair[i],
-                        tokenIn,
-                        tokenOut,
-                        routingAmountsToSendToAmms[i]
-                    );
-                }
-            }
-            console.log("Inside uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
@@ -259,7 +246,7 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
-            console.log("Inside uniswapV2Call() - 6");
+            console.log("Inside uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].x != 0) {
@@ -267,13 +254,14 @@ contract DexProvider is IUniswapV2Callee {
                         factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        arbitrageAmountsToSendToAmms[i].x
+                        arbitrageAmountsToSendToAmms[i].x +
+                            routingAmountsToSendToAmms[i]
                     );
                 }
             }
-            console.log("Inside uniswapV2Call() - 7");
+            console.log("Inside uniswapV2Call() - 6");
         }
-        //TODO: check if this is the correct formula for interest on the loan
+        //TODO: check if this is the correct formula for interest on the loan; can we consider this when thinking about arbitrage opportunity?
         // uint256 returnLoan = (tokenOutAmount * 1003) / 1000;
 
         //return the loan
@@ -282,7 +270,7 @@ contract DexProvider is IUniswapV2Callee {
             whereToRepayLoan,
             amount0Out + amount1Out
         );
-        console.log("Inside uniswapV2Call() - 8");
+        console.log("Inside uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
         assert(
