@@ -200,7 +200,7 @@ describe("==================================== Swap ============================
   };
 
   const swapTestCases: SwapTestCaseParam[] = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 4; i < 5; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
       [Token.WETH, Token.UNI],
@@ -208,14 +208,14 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
-  for (let i = 0; i < 3; i++) {
-    swapTestCases.push([
-      Number(13679900 + 100 * i),
-      [Token.WETH, Token.SHIBA],
-      ethers.utils.parseEther("5"),
-      ethers.utils.parseEther("0.1"),
-    ] as SwapTestCaseParam);
-  }
+  // for (let i = 0; i < 3; i++) {
+  //   swapTestCases.push([
+  //     Number(13679900 + 100 * i),
+  //     [Token.WETH, Token.SHIBA],
+  //     ethers.utils.parseEther("5"),
+  //     ethers.utils.parseEther("0.1"),
+  //   ] as SwapTestCaseParam);
+  // }
 
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
@@ -262,12 +262,14 @@ describe("==================================== Swap ============================
         swapContract.address
       );
 
+      console.log("calling swap");
       //call the swap
       const tx = await swapContract.swap(
         tokenToAddress[tokenIn],
         tokenToAddress[tokenOut],
         amountIn
       );
+      console.log("after swap");
       const txStatus = await tx.wait();
       //check event emitted?
       // const swapEvent = txStatus.events.filter(

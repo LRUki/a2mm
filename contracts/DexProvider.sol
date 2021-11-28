@@ -25,16 +25,16 @@ contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
 
     address internal constant _UNIV2_FACTORY_ADDRESS =
-    0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address internal constant _SUSHI_FACTORY_ADDRESS =
-    0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address internal constant _SHIBA_FACTORY_ADDRESS =
-    0x115934131916C8b277DD010Ee02de363c09d037c;
+        0x115934131916C8b277DD010Ee02de363c09d037c;
 
     address[3] internal _factoryAddresses = [
-    _UNIV2_FACTORY_ADDRESS,
-    _SUSHI_FACTORY_ADDRESS,
-    _SHIBA_FACTORY_ADDRESS
+        _UNIV2_FACTORY_ADDRESS,
+        _SUSHI_FACTORY_ADDRESS,
+        _SHIBA_FACTORY_ADDRESS
     ];
 
     function getReserves(
@@ -47,12 +47,12 @@ contract DexProvider is IUniswapV2Callee {
             tokenB
         );
         require(pairAddress != address(0), "This pool does not exist");
-        (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress)
-        .getReserves();
+        (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
+        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+            .getReserves();
         (reserveA, reserveB) = tokenA == token0
-        ? (reserve0, reserve1)
-        : (reserve1, reserve0);
+            ? (reserve0, reserve1)
+            : (reserve1, reserve0);
     }
 
     //swaps tokenIn -> tokenOut
@@ -71,13 +71,13 @@ contract DexProvider is IUniswapV2Callee {
         );
         console.log("Inside executeSwap() - 1");
         require(pairAddress != address(0), "This pool does not exist");
-        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress)
-        .getReserves();
+        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
+            .getReserves();
         console.log("Inside executeSwap() - 2");
         (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
-        ? (reserve0, reserve1)
-        : (reserve1, reserve0);
+            ? (reserve0, reserve1)
+            : (reserve1, reserve0);
         console.log("Inside executeSwap() - 3");
         amountOut = UniswapV2Library.getAmountOut(
             amountIn,
@@ -87,8 +87,8 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside executeSwap() - 4");
         IERC20(tokenIn).transfer(pairAddress, amountIn);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-        ? (uint256(0), amountOut)
-        : (amountOut, uint256(0));
+            ? (uint256(0), amountOut)
+            : (amountOut, uint256(0));
         console.log("Inside executeSwap() - 5");
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
@@ -107,12 +107,12 @@ contract DexProvider is IUniswapV2Callee {
     // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
     // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
     function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
-    internal
-    view
-    returns (
-        address[] memory factoriesSupportingTokenPair,
-        Structs.Amm[] memory amms
-    )
+        internal
+        view
+        returns (
+            address[] memory factoriesSupportingTokenPair,
+            Structs.Amm[] memory amms
+        )
     {
         uint256 noFactoriesSupportingTokenPair = 0;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
@@ -169,7 +169,7 @@ contract DexProvider is IUniswapV2Callee {
             tokenOut
         );
 
-        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
 
         bytes memory data = abi.encode(
             factoriesSupportingTokenPair,
@@ -182,8 +182,8 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside flashSwap()");
 
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-        ? (uint256(0), yToLoan)
-        : (yToLoan, uint256(0));
+            ? (uint256(0), yToLoan)
+            : (yToLoan, uint256(0));
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
@@ -201,7 +201,7 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside uniswapV2Call() - start");
         require(
             (amount0Out > 0 && amount1Out == 0) ||
-            (amount0Out == 0 && amount1Out > 0),
+                (amount0Out == 0 && amount1Out > 0),
             "flash loan invalid"
         );
 
@@ -216,29 +216,38 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside uniswapV2Call() - 1");
         {
             (
-            factoriesSupportingTokenPair,
-            routingAmountsToSendToAmms,
-            arbitrageAmountsToSendToAmms,
-            whereToRepayLoan,
-            xGross
+                factoriesSupportingTokenPair,
+                routingAmountsToSendToAmms,
+                arbitrageAmountsToSendToAmms,
+                whereToRepayLoan,
+                xGross
             ) = abi.decode(
                 data,
-                (address[], uint256[], Structs.AmountsToSendToAmm[], address, uint256)
+                (
+                    address[],
+                    uint256[],
+                    Structs.AmountsToSendToAmm[],
+                    address,
+                    uint256
+                )
             );
-            console.log("factoriesSupportingTokenPair.length = %s", factoriesSupportingTokenPair.length);
+            console.log(
+                "factoriesSupportingTokenPair.length = %s",
+                factoriesSupportingTokenPair.length
+            );
             console.log("Inside uniswapV2Call() - 2");
 
             address token0 = IUniswapV2Pair(msg.sender).token0();
             address token1 = IUniswapV2Pair(msg.sender).token1();
             assert(
                 msg.sender ==
-                IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
+                    IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
             );
             console.log("Inside uniswapV2Call() - 3");
 
             (tokenIn, tokenOut) = amount0Out == 0
-            ? (token0, token1)
-            : (token1, token0);
+                ? (token0, token1)
+                : (token1, token0);
 
             console.log("Inside uniswapV2Call() - 4");
 
@@ -256,10 +265,13 @@ contract DexProvider is IUniswapV2Callee {
             console.log("Inside uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                if (arbitrageAmountsToSendToAmms[i].x != 0 && factoriesSupportingTokenPair[i] != whereToRepayLoan) {
+                if (
+                    arbitrageAmountsToSendToAmms[i].x != 0 &&
+                    factoriesSupportingTokenPair[i] != whereToRepayLoan
+                ) {
                     console.log("X->Y i = %s", i);
                     uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
-                    routingAmountsToSendToAmms[i];
+                        routingAmountsToSendToAmms[i];
                     xGross -= xToSend;
                     yGross += executeSwap(
                         factoriesSupportingTokenPair[i],
@@ -278,9 +290,9 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
-//        assert(
-//            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
-//        );
+        //        assert(
+        //            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
+        //        );
         console.log("Inside uniswapV2Call() - end");
     }
 }
