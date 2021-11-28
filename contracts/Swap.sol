@@ -91,6 +91,22 @@ contract Swap is DexProvider {
         emit SwapEvent(amountIn, amountOut);
     }
 
+
+    // @param amms - the state of the AMMs we are considering the transactions on
+    // @param routes - the amounts of X we are to trade for Y (usually obtained from calling the route() function)
+    // @param arbitrages - the amounts of X and Y we are using for arbitrage (usually obtained from calling the arbitrageForY() function)
+    // @return totalOut - assuming that arbitrage did not need a flash loan, this will be the amount of Y the user would get for making these trades
+    function _calculateTotalYOut(Structs.Amm[] memory amms, uint256[] memory routes, Structs.AmountsToSendToAmm[] memory arbitrages) private pure returns (uint256 totalOut) {
+        totalOut = 0;
+        for (uint256 i = 0; i < amms.length; i++) {
+            totalOut += SharedFunctions.quantityOfYForX(
+                amms[i],
+                routes[i] + arbitrages[i].x
+            );
+        }
+    }
+
+
     // @param tokenIn - the token which the user will provide/is wanting to sell
     // @param tokenOut - the token which the user will be given/is wanting to buy
     // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
@@ -99,30 +115,25 @@ contract Swap is DexProvider {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external view returns (uint256 totalOut) {
+    ) external view returns (uint256) {
         (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
             tokenIn,
             tokenOut
         );
+
+        // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
             (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
         }
 
-        totalOut = 0;
         (
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
             uint256 flashLoanRequired,
-
         ) = calculateRouteAndArbitarge(amms0, amountIn);
-        for (uint256 i = 0; i < amms0.length; i++) {
-            totalOut += SharedFunctions.quantityOfYForX(
-                amms1[i],
-                routes[i] + arbitrages[i].x
-            );
-        }
-        return totalOut - flashLoanRequired;
+
+        return _calculateTotalYOut(amms1, routes, arbitrages) - flashLoanRequired;
     }
 
     // @param arbitragingFor - the token which the user will provide/is wanting to arbitrage for

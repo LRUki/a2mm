@@ -264,8 +264,9 @@ contract DexProvider is IUniswapV2Callee {
             }
             console.log("Inside uniswapV2Call() - 6");
         }
-        //TODO: check if this is the correct formula for interest on the loan; can we consider this when thinking about arbitrage opportunity?
-        uint256 returnLoan = ((amount0Out + amount1Out) * 1003) / 1000;
+
+        //TODO: returnLoan needs to be set to something else
+        uint256 returnLoan = 0;
 
         //return the loan
         TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, returnLoan);
