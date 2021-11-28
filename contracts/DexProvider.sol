@@ -23,17 +23,18 @@ import "hardhat/console.sol";
 
 contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
+
     address internal constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     address internal constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
+    0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
     address internal constant _SHIBA_FACTORY_ADDRESS =
-        0x115934131916C8b277DD010Ee02de363c09d037c;
+    0x115934131916C8b277DD010Ee02de363c09d037c;
 
     address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS,
-        _SHIBA_FACTORY_ADDRESS
+    _UNIV2_FACTORY_ADDRESS,
+    _SUSHI_FACTORY_ADDRESS,
+    _SHIBA_FACTORY_ADDRESS
     ];
 
     function getReserves(
@@ -46,12 +47,12 @@ contract DexProvider is IUniswapV2Callee {
             tokenB
         );
         require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
+        (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
+        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress)
+        .getReserves();
         (reserveA, reserveB) = tokenA == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        ? (reserve0, reserve1)
+        : (reserve1, reserve0);
     }
 
     //swaps tokenIn -> tokenOut
@@ -70,13 +71,13 @@ contract DexProvider is IUniswapV2Callee {
         );
         console.log("Inside executeSwap() - 1");
         require(pairAddress != address(0), "This pool does not exist");
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
-            .getReserves();
+        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pairAddress)
+        .getReserves();
         console.log("Inside executeSwap() - 2");
         (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        ? (reserve0, reserve1)
+        : (reserve1, reserve0);
         console.log("Inside executeSwap() - 3");
         amountOut = UniswapV2Library.getAmountOut(
             amountIn,
@@ -86,8 +87,8 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside executeSwap() - 4");
         IERC20(tokenIn).transfer(pairAddress, amountIn);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), amountOut)
-            : (amountOut, uint256(0));
+        ? (uint256(0), amountOut)
+        : (amountOut, uint256(0));
         console.log("Inside executeSwap() - 5");
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
@@ -106,12 +107,12 @@ contract DexProvider is IUniswapV2Callee {
     // @return factoriesSupportingTokenPair - an array of factory addresses which have the token pair
     // @return amms - a list of AMM structs containing the reserves of each AMM which has the token pair
     function _factoriesWhichSupportPair(address tokenIn, address tokenOut)
-        internal
-        view
-        returns (
-            address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
-        )
+    internal
+    view
+    returns (
+        address[] memory factoriesSupportingTokenPair,
+        Structs.Amm[] memory amms
+    )
     {
         uint256 noFactoriesSupportingTokenPair = 0;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
@@ -158,6 +159,7 @@ contract DexProvider is IUniswapV2Callee {
         address tokenOut,
         uint256 yToLoan,
         address whereToLoan,
+        uint256 amountIn,
         address[] memory factoriesSupportingTokenPair,
         uint256[] memory routingAmountsToSendToAmms,
         Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
@@ -167,20 +169,21 @@ contract DexProvider is IUniswapV2Callee {
             tokenOut
         );
 
-        (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
+        (address token0,) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
 
         bytes memory data = abi.encode(
             factoriesSupportingTokenPair,
             routingAmountsToSendToAmms,
             arbitrageAmountsToSendToAmms,
-            whereToLoan
+            whereToLoan,
+            amountIn
         );
 
         console.log("Inside flashSwap()");
 
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), yToLoan)
-            : (yToLoan, uint256(0));
+        ? (uint256(0), yToLoan)
+        : (yToLoan, uint256(0));
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
@@ -198,7 +201,7 @@ contract DexProvider is IUniswapV2Callee {
         console.log("Inside uniswapV2Call() - start");
         require(
             (amount0Out > 0 && amount1Out == 0) ||
-                (amount0Out == 0 && amount1Out > 0),
+            (amount0Out == 0 && amount1Out > 0),
             "flash loan invalid"
         );
 
@@ -208,17 +211,19 @@ contract DexProvider is IUniswapV2Callee {
         Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms;
         uint256[] memory routingAmountsToSendToAmms;
         address[] memory factoriesSupportingTokenPair;
+        uint256 xGross;
         uint256 yGross = 0;
         console.log("Inside uniswapV2Call() - 1");
         {
             (
-                factoriesSupportingTokenPair,
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms,
-                whereToRepayLoan
+            factoriesSupportingTokenPair,
+            routingAmountsToSendToAmms,
+            arbitrageAmountsToSendToAmms,
+            whereToRepayLoan,
+            xGross
             ) = abi.decode(
                 data,
-                (address[], uint256[], Structs.AmountsToSendToAmm[], address)
+                (address[], uint256[], Structs.AmountsToSendToAmm[], address, uint256)
             );
             console.log("factoriesSupportingTokenPair.length = %s", factoriesSupportingTokenPair.length);
             console.log("Inside uniswapV2Call() - 2");
@@ -227,20 +232,20 @@ contract DexProvider is IUniswapV2Callee {
             address token1 = IUniswapV2Pair(msg.sender).token1();
             assert(
                 msg.sender ==
-                    IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
+                IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
             );
             console.log("Inside uniswapV2Call() - 3");
 
             (tokenIn, tokenOut) = amount0Out == 0
-                ? (token0, token1)
-                : (token1, token0);
+            ? (token0, token1)
+            : (token1, token0);
 
             console.log("Inside uniswapV2Call() - 4");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
                     console.log("Y->X i = %s", i);
-                    executeSwap(
+                    xGross += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenOut,
                         tokenIn,
@@ -253,36 +258,29 @@ contract DexProvider is IUniswapV2Callee {
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].x != 0 && factoriesSupportingTokenPair[i] != whereToRepayLoan) {
                     console.log("X->Y i = %s", i);
+                    uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
+                    routingAmountsToSendToAmms[i];
+                    xGross -= xToSend;
                     yGross += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        arbitrageAmountsToSendToAmms[i].x +
-                            routingAmountsToSendToAmms[i]
+                        xToSend
                     );
                 }
             }
             console.log("Inside uniswapV2Call() - 6");
         }
 
-        //TODO: returnLoan needs to be set to something else
-        uint256 returnLoan = 0;
-
         //return the loan
-        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, returnLoan);
+        TransferHelper.safeTransfer(tokenIn, whereToRepayLoan, xGross);
+        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, yGross);
         console.log("Inside uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
-        assert(
-            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
-        );
-
-        //TODO: Return remaining amount to out contract/the user
-        //        TransferHelper.safeTransfer(
-        //            tokenOut,
-        //            ,
-        //            yGross - returnLoan
-        //        );
+//        assert(
+//            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
+//        );
         console.log("Inside uniswapV2Call() - end");
     }
 }

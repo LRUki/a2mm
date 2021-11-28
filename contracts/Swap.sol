@@ -21,6 +21,7 @@ import "hardhat/console.sol";
 
 contract Swap is DexProvider {
     Structs.AmountsToSendToAmm[3] private _amountsToSendToAmm;
+
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
     function swap(
@@ -32,38 +33,56 @@ contract Swap is DexProvider {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
             "user needs to approve"
         );
-        (
-            address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
-        ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
 
-        require(factoriesSupportingTokenPair.length > 0, "no amms avilable");
+        address[] memory factoriesSupportingTokenPair;
+        uint256[] memory routingAmountsToSendToAmms;
+        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms;
+        uint256 amountOfYtoFlashLoan;
+        uint256 whereToLoanIndex;
+        //TODO: since calculateRouteAndArbitarge is public, does it still take things by reference? If not, then the below lines of copying the amms can be deleted.
+        // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
+        Structs.Amm[] memory amms1;
+        {
+            Structs.Amm[] memory amms0;
+            (factoriesSupportingTokenPair, amms0) = _factoriesWhichSupportPair(tokenIn, tokenOut);
+            amms1 = new Structs.Amm[](amms0.length);
+            for (uint256 i = 0; i < amms0.length; i++) {
+                (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
+            }
 
-        (
-            uint256[] memory routingAmountsToSendToAmms,
-            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            uint256 amountOfYtoFlashLoan,
-            uint256 whereToLoanIndex
-        ) = calculateRouteAndArbitarge(amms, amountIn);
+            require(factoriesSupportingTokenPair.length > 0, "no amms avilable");
 
-        uint256 ySum = 0;
-        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-            ySum += arbitrageAmountsToSendToAmms[i].y;
+            (
+            routingAmountsToSendToAmms,
+            arbitrageAmountsToSendToAmms,
+            amountOfYtoFlashLoan,
+            whereToLoanIndex
+            ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
 
-        //handle integer division error
+        bool arbitrageRequired = false;
+        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
+            if (arbitrageAmountsToSendToAmms[i].y != 0) {
+                arbitrageRequired = true;
+                break;
+            }
+        }
+
+        //TODO: handle integer division error
         uint256 amountOut = 0;
-        if (ySum > 0) {
-            //TODO: how to get the amountOut from flashSwap?
+        if (arbitrageRequired) {
+            uint256 yRequired = _calculateTotalYOut(amms1, routingAmountsToSendToAmms, arbitrageAmountsToSendToAmms);
+            amountOut = yRequired - amountOfYtoFlashLoan;
             console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
-                whereToLoanIndex
+            whereToLoanIndex
             ];
             flashSwap(
                 tokenIn,
                 tokenOut,
-                ySum,
+                yRequired,
                 whereToLoan,
+                amountIn,
                 factoriesSupportingTokenPair,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
@@ -71,14 +90,13 @@ contract Swap is DexProvider {
         } else {
             console.log("only Routing");
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-                uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
-                    routingAmountsToSendToAmms[i];
-                if (xToSend > 0) {
+                assert(arbitrageAmountsToSendToAmms[i].x == 0);
+                if (routingAmountsToSendToAmms[i] > 0) {
                     amountOut += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        xToSend
+                        routingAmountsToSendToAmms[i]
                     );
                 }
             }
@@ -121,6 +139,7 @@ contract Swap is DexProvider {
             tokenOut
         );
 
+        //TODO: since calculateRouteAndArbitarge is public, does it still take things by reference? If not, then the below lines of copying the amms can be deleted.
         // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
@@ -128,9 +147,9 @@ contract Swap is DexProvider {
         }
 
         (
-            uint256[] memory routes,
-            Structs.AmountsToSendToAmm[] memory arbitrages,
-            uint256 flashLoanRequired,
+        uint256[] memory routes,
+        Structs.AmountsToSendToAmm[] memory arbitrages,
+        uint256 flashLoanRequired,
         ) = calculateRouteAndArbitarge(amms0, amountIn);
 
         return _calculateTotalYOut(amms1, routes, arbitrages) - flashLoanRequired;
@@ -156,7 +175,7 @@ contract Swap is DexProvider {
         }
 
         Structs.AmountsToSendToAmm[] memory arbitrages;
-        (arbitrages, tokenInRequired, ) = Arbitrage.arbitrageForY(amms0, 0);
+        (arbitrages, tokenInRequired,) = Arbitrage.arbitrageForY(amms0, 0);
         arbitrageGain = 0;
         for (uint256 i = 0; i < amms0.length; i++) {
             arbitrageGain += SharedFunctions.quantityOfYForX(
@@ -176,24 +195,24 @@ contract Swap is DexProvider {
         Structs.Amm[] memory amms,
         uint256 amountOfX
     )
-        public
-        pure
-        returns (
-            uint256[] memory routingAmountsToSendToAmms,
-            Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            uint256 amountOfYtoFlashLoan,
-            uint256 whereToLoanIndex
-        )
+    public
+    pure
+    returns (
+        uint256[] memory routingAmountsToSendToAmms,
+        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
+        uint256 amountOfYtoFlashLoan,
+        uint256 whereToLoanIndex
+    )
     {
         whereToLoanIndex = Arbitrage.MAX_INT;
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
         (
-            routingAmountsToSendToAmms,
-            totalYGainedFromRouting,
-            shouldArbitrage,
-            amms
+        routingAmountsToSendToAmms,
+        totalYGainedFromRouting,
+        shouldArbitrage,
+        amms
         ) = Route.route(amms, amountOfX);
 
         amountOfYtoFlashLoan = 0;
@@ -201,9 +220,9 @@ contract Swap is DexProvider {
         arbitrageAmountsToSendToAmms[0] = Structs.AmountsToSendToAmm(0, 0);
         if (shouldArbitrage && amms.length > 1) {
             (
-                arbitrageAmountsToSendToAmms,
-                amountOfYtoFlashLoan,
-                whereToLoanIndex
+            arbitrageAmountsToSendToAmms,
+            amountOfYtoFlashLoan,
+            whereToLoanIndex
             ) = Arbitrage.arbitrageForY(amms, totalYGainedFromRouting);
         }
     }
@@ -212,14 +231,14 @@ contract Swap is DexProvider {
         uint256[2][] memory ammsArray,
         uint256 amountOfX
     )
-        public
-        pure
-        returns (
-            uint256[] memory,
-            Structs.AmountsToSendToAmm[] memory,
-            uint256,
-            uint256
-        )
+    public
+    pure
+    returns (
+        uint256[] memory,
+        Structs.AmountsToSendToAmm[] memory,
+        uint256,
+        uint256
+    )
     {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
