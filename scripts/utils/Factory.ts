@@ -1,7 +1,7 @@
 export enum Factory {
-  UNIV2,
-  SUSHI,
-  SHIBA,
+  UNIV2 = "UNIV2",
+  SUSHI = "SUSHI",
+  SHIBA = "SHIBA",
 }
 
 export const factoryToAddress = {
