@@ -69,36 +69,36 @@ contract DexProvider is IUniswapV2Callee {
             tokenIn,
             tokenOut
         );
-        console.log("Inside executeSwap() - 1");
+        console.log("executeSwap() - 1");
         require(pairAddress != address(0), "This pool does not exist");
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pairAddress)
             .getReserves();
-        console.log("Inside executeSwap() - 2");
+        console.log("executeSwap() - 2");
         (uint256 reserveIn, uint256 reserveOut) = token0 == tokenIn
             ? (reserve0, reserve1)
             : (reserve1, reserve0);
-        console.log("Inside executeSwap() - 3");
+        console.log("executeSwap() - 3");
         amountOut = UniswapV2Library.getAmountOut(
             amountIn,
             reserveIn,
             reserveOut
         );
-        console.log("Inside executeSwap() - 4");
+        console.log("executeSwap() - 4");
         IERC20(tokenIn).transfer(pairAddress, amountIn);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), amountOut)
             : (amountOut, uint256(0));
-        console.log("Inside executeSwap() - 5");
+        console.log("executeSwap() - 5");
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
             new bytes(0)
         );
-        console.log("Inside executeSwap() - 6");
+        console.log("executeSwap() - 6");
         emit ExecuteSwapEvent(amountIn, amountOut);
-        console.log("Inside executeSwap() - end");
+        console.log("Exiting executeSwap()");
         return amountOut;
     }
 
@@ -164,6 +164,7 @@ contract DexProvider is IUniswapV2Callee {
         uint256[] memory routingAmountsToSendToAmms,
         Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
     ) public {
+        console.log("Inside flashSwap()");
         address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
             tokenIn,
             tokenOut
@@ -179,17 +180,20 @@ contract DexProvider is IUniswapV2Callee {
             amountIn
         );
 
-        console.log("Inside flashSwap()");
+        console.log("flashSwap() - 1");
 
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), yToLoan)
             : (yToLoan, uint256(0));
+        console.log("flashSwap() - 2");
+
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
             data
         );
+        console.log("exiting flashSwap()");
     }
 
     function uniswapV2Call(
@@ -199,6 +203,7 @@ contract DexProvider is IUniswapV2Callee {
         bytes calldata data
     ) external override {
         console.log("Inside uniswapV2Call() - start");
+
         require(
             (amount0Out > 0 && amount1Out == 0) ||
                 (amount0Out == 0 && amount1Out > 0),
@@ -213,7 +218,7 @@ contract DexProvider is IUniswapV2Callee {
         address[] memory factoriesSupportingTokenPair;
         uint256 xGross;
         uint256 yGross = 0;
-        console.log("Inside uniswapV2Call() - 1");
+        console.log("uniswapV2Call() - 1");
         {
             (
                 factoriesSupportingTokenPair,
@@ -231,25 +236,30 @@ contract DexProvider is IUniswapV2Callee {
                     uint256
                 )
             );
+
             console.log(
                 "factoriesSupportingTokenPair.length = %s",
                 factoriesSupportingTokenPair.length
             );
-            console.log("Inside uniswapV2Call() - 2");
+            console.log("uniswapV2Call() - 2");
 
-            address token0 = IUniswapV2Pair(msg.sender).token0();
-            address token1 = IUniswapV2Pair(msg.sender).token1();
-            assert(
-                msg.sender ==
-                    IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
-            );
-            console.log("Inside uniswapV2Call() - 3");
+            {
+                address token0 = IUniswapV2Pair(msg.sender).token0();
+                address token1 = IUniswapV2Pair(msg.sender).token1();
 
-            (tokenIn, tokenOut) = amount0Out == 0
-                ? (token0, token1)
-                : (token1, token0);
+                assert(
+                    msg.sender ==
+                        IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
+                );
+                console.log("uniswapV2Call() - 3");
 
-            console.log("Inside uniswapV2Call() - 4");
+                (tokenIn, tokenOut) = amount0Out == 0
+                    ? (token0, token1)
+                    : (token1, token0);
+            }
+            console.log("uniswapV2Call() - Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
+
+            console.log("uniswapV2Call() - 4");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
@@ -262,7 +272,7 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
-            console.log("Inside uniswapV2Call() - 5");
+            console.log("uniswapV2Call() - 5");
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (
@@ -281,18 +291,22 @@ contract DexProvider is IUniswapV2Callee {
                     );
                 }
             }
-            console.log("Inside uniswapV2Call() - 6");
+            console.log("uniswapV2Call() - 6");
         }
 
         //return the loan
-        TransferHelper.safeTransfer(tokenIn, whereToRepayLoan, xGross);
-        TransferHelper.safeTransfer(tokenOut, whereToRepayLoan, yGross);
-        console.log("Inside uniswapV2Call() - 7");
+        console.log("xGross = %s, yGross = %s", xGross, yGross);
+//        IERC20(tokenIn).transfer(msg.sender, xGross);
+        TransferHelper.safeTransfer(tokenIn, msg.sender, xGross);
+//        IERC20(tokenOut).transfer(msg.sender, xGross);
+        TransferHelper.safeTransfer(tokenOut, msg.sender, yGross);
+        console.log("uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
+        console.log("Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
         //        assert(
         //            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
         //        );
-        console.log("Inside uniswapV2Call() - end");
+        console.log("Exiting uniswapV2Call() - end");
     }
 }

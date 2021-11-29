@@ -66,23 +66,21 @@ contract Swap is DexProvider {
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
 
-        bool arbitrageRequired = false;
+        uint256 ySum = 0;
         for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-            if (arbitrageAmountsToSendToAmms[i].y != 0) {
-                arbitrageRequired = true;
-                break;
-            }
+            ySum += arbitrageAmountsToSendToAmms[i].y;
         }
 
         //TODO: handle integer division error
         uint256 amountOut = 0;
-        if (arbitrageRequired) {
+        if (ySum > 0) {
             uint256 yRequired = _calculateTotalYOut(
                 amms1,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            amountOut = yRequired - amountOfYtoFlashLoan;
+            console.log("ySum = %s", ySum);
+            amountOut = yRequired - amountOfYtoFlashLoan - ySum;
             console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
@@ -97,6 +95,7 @@ contract Swap is DexProvider {
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
+            assert(IERC20(tokenOut).balanceOf(address(this)) == amountOut);
         } else {
             console.log("only Routing");
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
@@ -112,6 +111,9 @@ contract Swap is DexProvider {
             }
         }
 
+        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
+        console.log("amountOut = %s", amountOut);
+        console.log("Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
             "token failed to be sent back"
@@ -130,10 +132,12 @@ contract Swap is DexProvider {
     ) private pure returns (uint256 totalOut) {
         totalOut = 0;
         for (uint256 i = 0; i < amms.length; i++) {
-            totalOut += SharedFunctions.quantityOfYForX(
-                amms[i],
-                routes[i] + arbitrages[i].x
-            );
+            if (routes[i] + arbitrages[i].x != 0) {
+                totalOut += SharedFunctions.quantityOfYForX(
+                    amms[i],
+                    routes[i] + arbitrages[i].x
+                );
+            }
         }
     }
 
