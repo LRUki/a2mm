@@ -19,7 +19,7 @@ export default {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      //https://hardhat.org/hardhat-network/guides/mainnet-forking.html
+      chainId: 1,
       forking: {
         url: "https://speedy-nodes-nyc.moralis.io/0786eddbee701c23817a1112/eth/mainnet/archive",
         blockNumber: 13482613,
