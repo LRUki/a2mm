@@ -2,7 +2,6 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import deployContract from "../scripts/utils/deploy";
 import {
-  TEN_TO_18,
   toStringMap,
   whatPrecision,
   calculateRatio,
@@ -23,10 +22,10 @@ describe("==================================== Arbitrage =======================
   it("Flash loan is required when we hold no Y", async function () {
     const amm = await this.arbitrage.arbitrageWrapper(
       [
-        toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-        toStringMap([500 * TEN_TO_18, 200 * TEN_TO_18]),
-        toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
+        toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+        toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+        toStringMap([ethers.utils.parseEther("500"), ethers.utils.parseEther("200")]),
+        toStringMap([ethers.utils.parseEther("50"), ethers.utils.parseEther("10")]),
       ],
       `${0}`
     );
@@ -34,11 +33,12 @@ describe("==================================== Arbitrage =======================
   });
 
   it("Arbitrage fails when only one AMM supplied", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.0031");
     var throwsError = false;
     try {
       await this.arbitrage.arbitrageWrapper(
-        [toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18])],
-        `${0.0031 * TEN_TO_18}`
+        toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+        `${amountOfXToSend}`
       );
     } catch (error) {
       throwsError = true;
@@ -47,25 +47,33 @@ describe("==================================== Arbitrage =======================
   });
 
   it("Arbitrage runs when exactly two AMMs supplied (edge case)", async function () {
-    await this.arbitrage.arbitrageWrapper(
-      [
-        toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
-      ],
-      `${0.0031 * TEN_TO_18}`
-    );
+    let amountOfXToSend = ethers.utils.parseEther("0.0031");
+    var throwsError = false;
+    try {
+      await this.arbitrage.arbitrageWrapper(
+        [
+          toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+          toStringMap([ethers.utils.parseEther("5"), ethers.utils.parseEther("2")]),
+        ],
+        `${amountOfXToSend}`
+      );
+    } catch (error) {
+      throwsError = true;
+    }
+    expect(throwsError).to.equal(false);
   });
 
   it("No arbitrage opportunity - nothing sent anywhere, and no flash loan", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.0031");
     let ammsArr = [
-      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
-      toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
-      toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
-      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
+      toStringMap([ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.3")]),
+      toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
     ];
     const amm = await this.arbitrage.arbitrageWrapper(
       ammsArr,
-      `${0.0031 * TEN_TO_18}`
+      `${amountOfXToSend}`
     );
 
     for (let i = 0; i < ammsArr.length; i++) {
@@ -76,28 +84,30 @@ describe("==================================== Arbitrage =======================
   });
 
   it("Holding lots of Y means no flash loan required:", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("100");
     const amm = await this.arbitrage.arbitrageWrapper(
       [
-        toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-        toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+        toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+        toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+        toStringMap([ethers.utils.parseEther("0.5"), ethers.utils.parseEther("0.2")]),
       ],
-      `${100 * TEN_TO_18}`
+      `${amountOfXToSend}`
     );
     expect(amm[1].toString()).to.equal("0");
   });
 
   it("Ratios Y/X about equal after arbitrage done", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.31");
     let ammsArr = [
-      toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-      toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+      toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+      toStringMap([ethers.utils.parseEther("0.5"), ethers.utils.parseEther("0.2")]),
+      toStringMap([ethers.utils.parseEther("5"), ethers.utils.parseEther("2")]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
     ];
 
     const amm = await this.arbitrage.arbitrageWrapper(
       ammsArr,
-      `${0.31 * TEN_TO_18}`
+      `${amountOfXToSend}`
     );
 
     let firstRatio = await calculateRatio(
@@ -121,12 +131,12 @@ describe("==================================== Arbitrage =======================
   });
 
   it("amounts of Y sent to AMMs = amount of Y held + Flash loan", async function () {
-    let amountOfYHeld = BigInt(0.000000031 * TEN_TO_18);
+    let amountOfYHeld = BigInt(ethers.utils.parseEther("0.000000031").toString());
     let ammsArr = [
-      toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-      toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+      toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+      toStringMap([ethers.utils.parseEther("5"), ethers.utils.parseEther("2")]),
+      toStringMap([ethers.utils.parseEther("0.5"), ethers.utils.parseEther("0.2")]),
     ];
     const amm = await this.arbitrage.arbitrageWrapper(
       ammsArr,

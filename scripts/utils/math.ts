@@ -1,10 +1,8 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import assert from "assert";
 
-export const TEN_TO_18 = Math.pow(10, 18);
-export const TEN_TO_9 = Math.pow(10, 9);
-
 // helper functions for testing
-export const toStringMap = (nums: number[]) => nums.map((num) => `${num}`);
+export const toStringMap = (nums: BigNumber[] ) => nums.map((num) => `${num}`);
 
 export function whatPrecision(x: number, sf: number) {
   assert(x != 0);
