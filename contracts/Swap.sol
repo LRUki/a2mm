@@ -150,13 +150,13 @@ contract Swap is DexProvider {
             }
         }
 
-//        uint256 onlyRoutes = 0;
-//        for (uint256 i = 0; i < amms.length; i++) {
-//            if (routes[i] != 0) {
-//                onlyRoutes += SharedFunctions.quantityOfYForX(amms[i], routes[i]);
-//            }
-//        }
-//        console.log("only routing = %s", onlyRoutes);
+        //        uint256 onlyRoutes = 0;
+        //        for (uint256 i = 0; i < amms.length; i++) {
+        //            if (routes[i] != 0) {
+        //                onlyRoutes += SharedFunctions.quantityOfYForX(amms[i], routes[i]);
+        //            }
+        //        }
+        //        console.log("only routing = %s", onlyRoutes);
 
         totalOut -= ySum;
     }

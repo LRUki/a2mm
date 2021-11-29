@@ -181,12 +181,12 @@ contract DexProvider is IUniswapV2Callee {
         );
 
         console.log("flashSwap() - 1");
-//        {
-//        uint256 one;
-//        uint256 two;
-//        (one, two) = getReserves(whereToLoan, tokenIn, tokenOut);
-//        console.log("K = %s", one * two);
-//        }
+        //        {
+        //        uint256 one;
+        //        uint256 two;
+        //        (one, two) = getReserves(whereToLoan, tokenIn, tokenOut);
+        //        console.log("K = %s", one * two);
+        //        }
 
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), yToLoan)
@@ -275,9 +275,18 @@ contract DexProvider is IUniswapV2Callee {
 
             console.log("xGross: %s", xGross);
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                console.log("routingAmountsToSendToAmms[i] = %s, arbitrageAmountsToSendToAmms[i].y = %s, arbitrageAmountsToSendToAmms[i].x = %s", routingAmountsToSendToAmms[i], arbitrageAmountsToSendToAmms[i].y, arbitrageAmountsToSendToAmms[i].x);
+                console.log(
+                    "routingAmountsToSendToAmms[i] = %s, arbitrageAmountsToSendToAmms[i].y = %s, arbitrageAmountsToSendToAmms[i].x = %s",
+                    routingAmountsToSendToAmms[i],
+                    arbitrageAmountsToSendToAmms[i].y,
+                    arbitrageAmountsToSendToAmms[i].x
+                );
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
-                    console.log("Y->X on %s i = %s", factoriesSupportingTokenPair[i] , i);
+                    console.log(
+                        "Y->X on %s i = %s",
+                        factoriesSupportingTokenPair[i],
+                        i
+                    );
                     xGross += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenOut,
@@ -290,10 +299,17 @@ contract DexProvider is IUniswapV2Callee {
 
             console.log("xGross: %s", xGross);
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                uint256 xToSend = arbitrageAmountsToSendToAmms[i].x + routingAmountsToSendToAmms[i];
-                if (xToSend != 0 && factoriesSupportingTokenPair[i] != whereToRepayLoan
+                uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
+                    routingAmountsToSendToAmms[i];
+                if (
+                    xToSend != 0 &&
+                    factoriesSupportingTokenPair[i] != whereToRepayLoan
                 ) {
-                    console.log("X->Y on %s i = %s", factoriesSupportingTokenPair[i] , i);
+                    console.log(
+                        "X->Y on %s i = %s",
+                        factoriesSupportingTokenPair[i],
+                        i
+                    );
                     xGross -= xToSend;
                     yGross += executeSwap(
                         factoriesSupportingTokenPair[i],
@@ -306,37 +322,38 @@ contract DexProvider is IUniswapV2Callee {
             console.log("uniswapV2Call() - 6");
         }
 
-
-//        uint256 balance0 = IERC20(_token0).balanceOf(address(this));
-//        uint256 balance1 = IERC20(_token1).balanceOf(address(this));
-//        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
-//        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-//        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
-//        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-//            uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
-//            uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
-//            uint256 newK = balance0Adjusted.mul(balance1Adjusted);
-//        }
-
+        //        uint256 balance0 = IERC20(_token0).balanceOf(address(this));
+        //        uint256 balance1 = IERC20(_token1).balanceOf(address(this));
+        //        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+        //        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+        //        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+        //        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+        //            uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+        //            uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+        //            uint256 newK = balance0Adjusted.mul(balance1Adjusted);
+        //        }
 
         //return the loan
         console.log("xGross = %s, yGross = %s", xGross, yGross);
         TransferHelper.safeTransfer(tokenIn, msg.sender, xGross);
-        TransferHelper.safeTransfer(tokenOut, msg.sender, yGross/*+1450000000000000000000000*/);
-//        TransferHelper.safeTransfer(tokenOut, msg.sender, yGross);
-//        TransferHelper.safeTransfer(tokenOut, msg.sender, );
-
+        TransferHelper.safeTransfer(
+            tokenOut,
+            msg.sender,
+            yGross /*+1450000000000000000000000*/
+        );
+        //        TransferHelper.safeTransfer(tokenOut, msg.sender, yGross);
+        //        TransferHelper.safeTransfer(tokenOut, msg.sender, );
 
         console.log("uniswapV2Call() - 7");
 
-//        {
-//            uint256 one;
-//            uint256 two;
-//            (one, two) = getReserves(whereToRepayLoan, tokenIn, tokenOut);
-//            one += xGross;
-//            two = two - amount0Out - amount1Out + yGross;
-//            console.log("new K = %s", one * two);
-//        }
+        //        {
+        //            uint256 one;
+        //            uint256 two;
+        //            (one, two) = getReserves(whereToRepayLoan, tokenIn, tokenOut);
+        //            one += xGross;
+        //            two = two - amount0Out - amount1Out + yGross;
+        //            console.log("new K = %s", one * two);
+        //        }
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
         console.log(
