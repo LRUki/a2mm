@@ -249,7 +249,10 @@ contract DexProvider is IUniswapV2Callee {
 
                 assert(
                     msg.sender ==
-                        IUniswapV2Factory(whereToRepayLoan).getPair(token0, token1)
+                        IUniswapV2Factory(whereToRepayLoan).getPair(
+                            token0,
+                            token1
+                        )
                 );
                 console.log("uniswapV2Call() - 3");
 
@@ -257,7 +260,10 @@ contract DexProvider is IUniswapV2Callee {
                     ? (token0, token1)
                     : (token1, token0);
             }
-            console.log("uniswapV2Call() - Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
+            console.log(
+                "uniswapV2Call() - Balance of this address (in Y): %s",
+                IERC20(tokenOut).balanceOf(address(this))
+            );
 
             console.log("uniswapV2Call() - 4");
 
@@ -296,14 +302,17 @@ contract DexProvider is IUniswapV2Callee {
 
         //return the loan
         console.log("xGross = %s, yGross = %s", xGross, yGross);
-//        IERC20(tokenIn).transfer(msg.sender, xGross);
+        //        IERC20(tokenIn).transfer(msg.sender, xGross);
         TransferHelper.safeTransfer(tokenIn, msg.sender, xGross);
-//        IERC20(tokenOut).transfer(msg.sender, xGross);
+        //        IERC20(tokenOut).transfer(msg.sender, xGross);
         TransferHelper.safeTransfer(tokenOut, msg.sender, yGross);
         console.log("uniswapV2Call() - 7");
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
-        console.log("Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
+        console.log(
+            "Balance of this address (in Y): %s",
+            IERC20(tokenOut).balanceOf(address(this))
+        );
         //        assert(
         //            IERC20(tokenOut).balanceOf(address(this)) == yGross - returnLoan
         //        );

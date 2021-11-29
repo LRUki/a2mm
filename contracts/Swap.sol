@@ -113,7 +113,10 @@ contract Swap is DexProvider {
 
         console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
         console.log("amountOut = %s", amountOut);
-        console.log("Balance of this address (in Y): %s", IERC20(tokenOut).balanceOf(address(this)));
+        console.log(
+            "Balance of this address (in Y): %s",
+            IERC20(tokenOut).balanceOf(address(this))
+        );
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
             "token failed to be sent back"
