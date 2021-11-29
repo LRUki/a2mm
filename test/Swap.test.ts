@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { expect, assert } from "chai";
+import { expect } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
 import {
   getBalanceOfERC20,
@@ -8,8 +8,6 @@ import {
 
 import {
   calculateRatio,
-  TEN_TO_18,
-  TEN_TO_9,
   toStringMap,
   whatPrecision,
   quantityOfYForX,
@@ -60,7 +58,7 @@ describe("==================================== Swap Helpers ====================
       value: ethers.utils.parseEther(ethAmount),
     });
     const contractBalance = await signer.provider?.getBalance(
-        this.swap.address
+      this.swap.address
     );
     expect(contractBalance).to.equal(ethers.utils.parseEther(ethAmount));
   });
@@ -74,68 +72,88 @@ describe("==================================== Swap Helpers ====================
     //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
     await topUpWETHAndApproveContractToUse(signer, ethAmout, this.swap.address);
     const tx = await this.swap.swap(
-        tokenToAddress[tokenIn],
-        tokenToAddress[tokenOut],
-        ethAmout
+      tokenToAddress[tokenIn],
+      tokenToAddress[tokenOut],
+      ethAmout
     );
     const txStatus = await tx.wait();
     const swapEvent = txStatus.events.filter(
-        (e: { event: string; args: string[] }) => e.event == "SwapEvent"
+      (e: { event: string; args: string[] }) => e.event == "SwapEvent"
     );
     expect(swapEvent).to.have.lengthOf(1);
     const { amountOut } = swapEvent[0].args;
     const amountRecieved = await getBalanceOfERC20(
-        signer.address,
-        tokenToAddress[tokenOut]
+      signer.address,
+      tokenToAddress[tokenOut]
     );
     expect(amountRecieved.eq(amountOut)).to.be.true;
   });
 
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
-    let amountOfXToSend = 0.4 * TEN_TO_18;
+    let amountOfXToSend = ethers.utils.parseEther("0.4");
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-        [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
-        `${amountOfXToSend}`
+      [
+        toStringMap([
+          ethers.utils.parseEther("2"),
+          ethers.utils.parseEther("4"),
+        ]),
+      ],
+      `${amountOfXToSend}`
     );
     expect(amm[2]).to.equal(0);
-    expect(amm[0][0]).to.equal(BigInt(amountOfXToSend));
+    expect(amm[0][0]).to.equal(BigInt(amountOfXToSend.toString()));
     expect(amm[1][0].x).to.equal(0);
     expect(amm[1][0].y).to.equal(0);
   });
 
   it("No arbitrage opportunity - no flash loan required", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.0031");
     let ammsArr = [
-      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
-      toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
-      toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
-      toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
+      toStringMap([
+        ethers.utils.parseEther("0.2"),
+        ethers.utils.parseEther("0.3"),
+      ]),
+      toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
     ];
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-        ammsArr,
-        `${0.0031 * TEN_TO_18}`
+      ammsArr,
+      `${amountOfXToSend}`
     );
 
     expect(amm[2].toString()).to.equal("0");
   });
 
   it("Swapping lots of X means no flash loan required:", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("100");
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-        [
-          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-          toStringMap([2 * TEN_TO_18, 5 * TEN_TO_18]),
-          toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
-        ],
-        `${100 * TEN_TO_18}`
+      [
+        toStringMap([
+          ethers.utils.parseEther("3"),
+          ethers.utils.parseEther("2"),
+        ]),
+        toStringMap([
+          ethers.utils.parseEther("2"),
+          ethers.utils.parseEther("5"),
+        ]),
+        toStringMap([
+          ethers.utils.parseEther("0.5"),
+          ethers.utils.parseEther("0.2"),
+        ]),
+      ],
+      `${amountOfXToSend}`
     );
     expect(amm[2].toString()).to.equal("0");
   });
 
   it("Swapping with no AMMs causes error", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.4");
     var throwsError = false;
     try {
       await this.swap.calculateRouteAndArbitargeWrapper(
-          [],
-          `${0.4 * TEN_TO_18}`
+        [],
+        `${amountOfXToSend}`
       );
     } catch (error) {
       throwsError = true;
@@ -144,46 +162,63 @@ describe("==================================== Swap Helpers ====================
   });
 
   it("Ratios Y/X about equal after swapping done", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.0031");
     let ammsArr = [
-      toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-      toStringMap([5 * TEN_TO_18, 2 * TEN_TO_18]),
-      toStringMap([0.5 * TEN_TO_18, 0.2 * TEN_TO_18]),
+      toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("2")]),
+      toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+      toStringMap([ethers.utils.parseEther("5"), ethers.utils.parseEther("2")]),
+      toStringMap([
+        ethers.utils.parseEther("0.5"),
+        ethers.utils.parseEther("0.2"),
+      ]),
     ];
 
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-        ammsArr,
-        `${0.0031 * TEN_TO_18}`
+      ammsArr,
+      `${amountOfXToSend}`
     );
 
     let firstRatio = await calculateRatio(
-        Number(ammsArr[0][0]),
-        Number(ammsArr[0][1]),
-        Number(BigInt(amm[0][0]) + BigInt(amm[1][0].x)),
-        Number(amm[1][0].y)
+      Number(ammsArr[0][0]),
+      Number(ammsArr[0][1]),
+      Number(BigInt(amm[0][0]) + BigInt(amm[1][0].x)),
+      Number(amm[1][0].y)
     );
     for (let i = 1; i < ammsArr.length; i++) {
       let ratio = await calculateRatio(
-          Number(ammsArr[i][0]),
-          Number(ammsArr[i][1]),
-          Number(BigInt(amm[0][i]) + BigInt(amm[1][i].x)),
-          Number(amm[1][i].y)
+        Number(ammsArr[i][0]),
+        Number(ammsArr[i][1]),
+        Number(BigInt(amm[0][i]) + BigInt(amm[1][i].x)),
+        Number(amm[1][i].y)
       );
       expect(Math.abs(ratio - firstRatio)).to.lessThan(
-          Math.pow(10, whatPrecision(firstRatio, 2))
+        Math.pow(10, whatPrecision(firstRatio, 2))
       );
     }
   });
 
   it("Flash loan is required when we hold insufficient Y after routing", async function () {
+    let amountOfXToSend = ethers.utils.parseEther("0.00002");
     const amm = await this.swap.calculateRouteAndArbitargeWrapper(
-        [
-          toStringMap([3 * TEN_TO_18, 2 * TEN_TO_18]),
-          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-          toStringMap([5 * TEN_TO_18, 200 * TEN_TO_18]),
-          toStringMap([50 * TEN_TO_18, 10 * TEN_TO_18]),
-        ],
-        `${2 * TEN_TO_9}`
+      [
+        toStringMap([
+          ethers.utils.parseEther("3"),
+          ethers.utils.parseEther("2"),
+        ]),
+        toStringMap([
+          ethers.utils.parseEther("2"),
+          ethers.utils.parseEther("4"),
+        ]),
+        toStringMap([
+          ethers.utils.parseEther("5"),
+          ethers.utils.parseEther("200"),
+        ]),
+        toStringMap([
+          ethers.utils.parseEther("50"),
+          ethers.utils.parseEther("10"),
+        ]),
+      ],
+      `${amountOfXToSend}`
     );
     expect(amm[2].toString()).to.not.equal("0");
   });
@@ -217,56 +252,61 @@ describe("==================================== Swap ============================
     ] as SwapTestCaseParam);
   }
 
+  let worseCases = 0;
+
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
-        swapTestCase;
+      swapTestCase;
     it(`Test${i}: swapping ${ethers.utils.formatEther(
-        amountIn
+      amountIn
     )} ${tokenIn} => ${tokenOut} at block ${blockNumber}`, async () => {
       const swapContract = await forkAndDeploy(blockNumber);
       const [signer] = await ethers.getSigners();
-
       const factoryStats: FactoryStat[] = [];
       for (const factory of [Factory.UNIV2, Factory.SUSHI, Factory.SHIBA]) {
-        const [reserveIn, reserveOut]: BigNumber[] =
-            await swapContract.getReserves(
-                factoryToAddress[factory],
-                tokenToAddress[tokenIn],
-                tokenToAddress[tokenOut]
-            );
-
-        factoryStats.push({
-          factory,
-          reserveIn,
-          reserveOut,
-          amountIn,
-          amountOut: quantityOfYForX(
+        let [reserveIn, reserveOut]: BigNumber[] = [
+          ethers.utils.parseEther("0"),
+          ethers.utils.parseEther("0"),
+        ];
+        let poolExists = true;
+        try {
+          [reserveIn, reserveOut] = await swapContract.getReserves(
+            factoryToAddress[factory],
+            tokenToAddress[tokenIn],
+            tokenToAddress[tokenOut]
+          );
+        } catch (error) {
+          worseCases++;
+          poolExists = false;
+        }
+        if (poolExists) {
+          factoryStats.push({
+            factory,
+            reserveIn,
+            reserveOut,
+            amountIn,
+            amountOut: quantityOfYForX(
               reserveIn.toBigInt(),
               reserveOut.toBigInt(),
               amountIn.toBigInt()
-          ),
-        });
+            ),
+          });
+        }
       }
-      factoryStats.forEach((factoryStat) => {
-        const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
-        console.log(
-            `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
-        );
-      });
 
       //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
       //assuming that tokenIn is WETH
       await topUpWETHAndApproveContractToUse(
-          signer,
-          amountIn,
-          swapContract.address
+        signer,
+        amountIn,
+        swapContract.address
       );
 
       //call the swap
       const tx = await swapContract.swap(
-          tokenToAddress[tokenIn],
-          tokenToAddress[tokenOut],
-          amountIn
+        tokenToAddress[tokenIn],
+        tokenToAddress[tokenOut],
+        amountIn
       );
       const txStatus = await tx.wait();
       //check event emitted?
@@ -274,15 +314,38 @@ describe("==================================== Swap ============================
       //   (e: { event: string; args: string[] }) => e.event == "SwapEvent"
       // );
       const userRecievedAmount: BigNumber = await getBalanceOfERC20(
-          signer.address,
-          tokenToAddress[tokenOut]
-      );
-      console.log(
-          `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
+        signer.address,
+        tokenToAddress[tokenOut]
       );
 
+      let isBetter = true;
+      factoryStats.forEach((factoryStat) => {
+        const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
+        console.log(
+          `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
+        );
+        if (userRecievedAmount.toString() < amountOut.toString()) {
+          isBetter = false;
+        }
+      });
+
+      if (!isBetter) {
+        worseCases++;
+      }
+
+      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+      console.log(
+        `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
+      );
+      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
       //TODO compare the userRecievedAmount against FactoryStat
     });
+  });
+
+  it("Percentage should be smaller than 30%", async function () {
+    let percentage = worseCases * 10;
+    // console.log(percentage)
+    expect(percentage).to.lessThan(30);
   });
 });
 

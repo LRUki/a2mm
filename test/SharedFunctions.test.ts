@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "@ethersproject/bignumber";
-import { TEN_TO_18, toStringMap, quantityOfYForX } from "../scripts/utils/math";
+import { toStringMap, quantityOfYForX } from "../scripts/utils/math";
 import assert from "assert";
 
 describe("==================================== SharedFunctions ====================================", function () {
@@ -32,13 +32,13 @@ describe("==================================== SharedFunctions =================
         "quantityOfYForX(uint256,uint256,uint256)"
       ](x, y, dx);
     const res = await quantityOfYForXSmartContract(
-      BigInt(100 * TEN_TO_18),
-      BigInt(200 * TEN_TO_18),
+      BigInt(ethers.utils.parseEther("100").toString()),
+      BigInt(ethers.utils.parseEther("200").toString()),
       BigInt(200)
     );
     const exp = quantityOfYForX(
-      BigInt(100 * TEN_TO_18),
-      BigInt(200 * TEN_TO_18),
+      BigInt(ethers.utils.parseEther("100").toString()),
+      BigInt(ethers.utils.parseEther("200").toString()),
       BigInt(200)
     );
     expect(res.toString()).to.equal(exp.toString());
@@ -56,8 +56,8 @@ describe("==================================== SharedFunctions =================
       ](x, y, dx);
     try {
       await quantityOfYForXSmartContract(
-        BigInt(100 * TEN_TO_18),
-        BigInt(200 * TEN_TO_18),
+        BigInt(ethers.utils.parseEther("100").toString()),
+        BigInt(ethers.utils.parseEther("200").toString()),
         BigInt(-200)
       );
     } catch (error) {
@@ -78,8 +78,8 @@ describe("==================================== SharedFunctions =================
       ](x, y, dx);
     try {
       const res = await quantityOfYForXSmartContract(
-        BigInt(100 * TEN_TO_18),
-        BigInt(-200 * TEN_TO_18),
+        BigInt(ethers.utils.parseEther("100").toString()),
+        BigInt(ethers.utils.parseEther("-200").toString()),
         BigInt(200)
       );
     } catch (error) {
@@ -92,17 +92,17 @@ describe("==================================== SharedFunctions =================
     let testExamples = [
       {
         ammsArray: [
-          toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
-          toStringMap([1 * TEN_TO_18, 4 * TEN_TO_18]),
-          toStringMap([0.2 * TEN_TO_18, 0.2 * TEN_TO_18]),
+          toStringMap([ethers.utils.parseEther("1"), ethers.utils.parseEther("2")]),
+          toStringMap([ethers.utils.parseEther("1"), ethers.utils.parseEther("4")]),
+          toStringMap([ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.2")]),
         ],
         result: [2, 0, 1],
       },
       {
         ammsArray: [
-          toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
-          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-          toStringMap([0.2 * TEN_TO_18, 0.4 * TEN_TO_18]),
+          toStringMap([ethers.utils.parseEther("1"), ethers.utils.parseEther("2")]),
+          toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+          toStringMap([ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.4")]),
         ],
         result: [0, 1, 2],
       },
@@ -118,15 +118,15 @@ describe("==================================== SharedFunctions =================
 
   it("howMuchXToSpendToLevelAmms gives correct output", async function () {
     const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsWrapper(
-      toStringMap([100 * TEN_TO_18, 200 * TEN_TO_18]),
-      toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
+      toStringMap([ethers.utils.parseEther("100"), ethers.utils.parseEther("200")]),
+      toStringMap([ethers.utils.parseEther("100"), ethers.utils.parseEther("180")])
     );
 
     const exp = howMuchToSpendToLevelAmms(
-      100 * TEN_TO_18,
-      200 * TEN_TO_18,
-      100 * TEN_TO_18,
-      180 * TEN_TO_18
+      Number(ethers.utils.parseEther("100")),
+      Number(ethers.utils.parseEther("200")),
+      Number(ethers.utils.parseEther("100")),
+      Number(ethers.utils.parseEther("180"))
     );
 
     expect(Math.round((res - exp) / 100000).toString()).to.equal(
@@ -138,8 +138,8 @@ describe("==================================== SharedFunctions =================
     var throwsError = false;
     try {
       const res = await this.sharedFunctions.howMuchXToSpendToLevelAmmsWrapper(
-        toStringMap([-100 * TEN_TO_18, 200 * TEN_TO_18]),
-        toStringMap([100 * TEN_TO_18, 180 * TEN_TO_18])
+        toStringMap([ethers.utils.parseEther("-100"), ethers.utils.parseEther("200")]),
+        toStringMap([ethers.utils.parseEther("100"), ethers.utils.parseEther("180")])
       );
     } catch (error) {
       throwsError = true;
@@ -151,11 +151,11 @@ describe("==================================== SharedFunctions =================
     const res =
       await this.sharedFunctions.howToSplitRoutingOnLeveledAmmsWrapper(
         [
-          toStringMap([1 * TEN_TO_18, 2 * TEN_TO_18]),
-          toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
-          toStringMap([0.1 * TEN_TO_18, 0.2 * TEN_TO_18]),
+          toStringMap([ethers.utils.parseEther("1"), ethers.utils.parseEther("2")]),
+          toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
+          toStringMap([ethers.utils.parseEther("0.1"), ethers.utils.parseEther("0.2")]),
         ],
-        `${0.000031 * TEN_TO_18}`
+        `${ethers.utils.parseEther("0.000031")}`
       );
     const [p1, p2, p3]: number[] = res.map((v: BigNumber) => v.toNumber());
     expect(p2 / p1).to.equal(2);

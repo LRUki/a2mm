@@ -1,7 +1,7 @@
 import deployContract from "../scripts/utils/deploy";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { TEN_TO_18, toStringMap } from "../scripts/utils/math";
+import { toStringMap } from "../scripts/utils/math";
 
 describe("==================================== Route ====================================", function () {
   before(async function () {
@@ -18,7 +18,7 @@ describe("==================================== Route ===========================
   it("Routing with no AMMs causes error", async function () {
     var throwsError = false;
     try {
-      await this.route.routeWrapper([], `${0.4 * TEN_TO_18}`);
+      await this.route.routeWrapper([], `${ethers.utils.parseEther("0.4")}`);
     } catch (error) {
       throwsError = true;
     }
@@ -27,8 +27,8 @@ describe("==================================== Route ===========================
 
   it("When only one Amm is supplied for routing -> normal swap", async function () {
     const amm = await this.route.routeWrapper(
-      [toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18])],
-      `${0.4 * TEN_TO_18}`
+      [toStringMap([ethers.utils.parseEther("2"),ethers.utils.parseEther("4")])],
+      `${ethers.utils.parseEther("0.4")}`
     );
     const exp = 6649991662 * Math.pow(10, 8);
     expect(Math.round((amm[1] - exp) / Math.pow(10, 8)).toString()).to.equal(
@@ -39,10 +39,10 @@ describe("==================================== Route ===========================
   it("if you don't sell enough x to level two Amms, swap only on one of them", async function () {
     const amm = await this.route.routeWrapper(
       [
-        toStringMap([3 * TEN_TO_18, 4 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 4 * TEN_TO_18]),
+        toStringMap([ethers.utils.parseEther("3"), ethers.utils.parseEther("4")]),
+        toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("4")]),
       ],
-      `${0.4 * TEN_TO_18}`
+      `${ethers.utils.parseEther("0.4")}`
     );
     const exp = 6649991662 * Math.pow(10, 8);
     expect(Math.round((amm[1] - exp) / Math.pow(10, 8)).toString()).to.equal(
@@ -51,13 +51,13 @@ describe("==================================== Route ===========================
   });
 
   it("check that the sum of amount to spend on different amms eguals to amount spent", async function () {
-    let xToSpend = BigInt(6 * TEN_TO_18);
+    let xToSpend = BigInt(ethers.utils.parseEther("6").toString());
     const amm = await this.route.routeWrapper(
       [
-        toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
-        toStringMap([0.2 * TEN_TO_18, 0.3 * TEN_TO_18]),
-        toStringMap([4 * TEN_TO_18, 6 * TEN_TO_18]),
-        toStringMap([2 * TEN_TO_18, 3 * TEN_TO_18]),
+        toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
+        toStringMap([ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.3")]),
+        toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
+        toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
       ],
       `${xToSpend}`
     );
