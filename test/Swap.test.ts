@@ -258,12 +258,6 @@ describe("==================================== Swap ============================
           });
         }
       }
-      factoryStats.forEach((factoryStat) => {
-        const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
-        console.log(
-            `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
-        );
-      });
 
       //here we need to first convert native ETH to ERC20 WETH and approve the contract to use
       //assuming that tokenIn is WETH
@@ -288,6 +282,22 @@ describe("==================================== Swap ============================
           signer.address,
           tokenToAddress[tokenOut]
       );
+      
+      let isBetter = true
+      factoryStats.forEach((factoryStat) => {
+        const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
+        console.log(
+            `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
+        );
+        if(userRecievedAmount.toString() < amountOut.toString()){
+          isBetter = false
+        }
+      });
+
+      if(!isBetter){
+        worseCases ++
+      }
+
       console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
       console.log(
         `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
@@ -299,6 +309,7 @@ describe("==================================== Swap ============================
 
   it("Percentage should be smaller than 30%", async function () {
     let percentage = worseCases * 10
+    // console.log(percentage)
     expect(percentage).to.lessThan(30)
   });
 });
