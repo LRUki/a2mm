@@ -71,13 +71,13 @@ contract Swap is DexProvider {
         console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
         console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
 
-//        bool wasArbitrageDone = false;
-//        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-//            if (arbitrageAmountsToSendToAmms[i].y != 0) {
-//                wasArbitrageDone = true;
-//                break;
-//            }
-//        }
+        //        bool wasArbitrageDone = false;
+        //        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
+        //            if (arbitrageAmountsToSendToAmms[i].y != 0) {
+        //                wasArbitrageDone = true;
+        //                break;
+        //            }
+        //        }
 
         uint256 ySum = 0;
         for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
@@ -113,7 +113,10 @@ contract Swap is DexProvider {
                 "end of flashSwap() - Balance of this address (in Y): %s",
                 IERC20(tokenOut).balanceOf(address(this))
             );
-            require(IERC20(tokenOut).balanceOf(address(this)) == amountOut, "Predicted amountOut does not match actual");
+            require(
+                IERC20(tokenOut).balanceOf(address(this)) == amountOut,
+                "Predicted amountOut does not match actual"
+            );
         } else {
             console.log("only Routing");
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
@@ -201,8 +204,8 @@ contract Swap is DexProvider {
         address intermediateToken
     ) external view returns (uint256 arbitrageGain, uint256 tokenInRequired) {
         (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
-            arbitragingFor,
-            intermediateToken
+            intermediateToken,
+            arbitragingFor
         );
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
