@@ -261,7 +261,7 @@ contract DexProvider is IUniswapV2Callee {
                     : (token1, token0);
             }
             console.log(
-                "uniswapV2Call() - Balance of this address (in Y): %s",
+                "start of uniswapV2Call() - Balance of this address (in Y): %s",
                 IERC20(tokenOut).balanceOf(address(this))
             );
 
@@ -310,7 +310,7 @@ contract DexProvider is IUniswapV2Callee {
 
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
         console.log(
-            "Balance of this address (in Y): %s",
+            "end of UniswapV2Call() - Balance of this address (in Y): %s",
             IERC20(tokenOut).balanceOf(address(this))
         );
         //        assert(

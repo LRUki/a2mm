@@ -66,6 +66,19 @@ contract Swap is DexProvider {
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
 
+        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
+        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
+        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
+        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
+
+//        bool wasArbitrageDone = false;
+//        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
+//            if (arbitrageAmountsToSendToAmms[i].y != 0) {
+//                wasArbitrageDone = true;
+//                break;
+//            }
+//        }
+
         uint256 ySum = 0;
         for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
             ySum += arbitrageAmountsToSendToAmms[i].y;
@@ -79,8 +92,7 @@ contract Swap is DexProvider {
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            console.log("ySum = %s", ySum);
-            amountOut = yRequired - amountOfYtoFlashLoan - ySum;
+            amountOut = yRequired - amountOfYtoFlashLoan;
             console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
@@ -88,14 +100,20 @@ contract Swap is DexProvider {
             flashSwap(
                 tokenIn,
                 tokenOut,
-                yRequired,
+                yRequired + ySum,
                 whereToLoan,
                 amountIn,
                 factoriesSupportingTokenPair,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            assert(IERC20(tokenOut).balanceOf(address(this)) == amountOut);
+
+            console.log("amountOut = %s", amountOut);
+            console.log(
+                "end of flashSwap() - Balance of this address (in Y): %s",
+                IERC20(tokenOut).balanceOf(address(this))
+            );
+            require(IERC20(tokenOut).balanceOf(address(this)) == amountOut, "Predicted amountOut does not match actual");
         } else {
             console.log("only Routing");
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
@@ -110,13 +128,6 @@ contract Swap is DexProvider {
                 }
             }
         }
-
-        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-        console.log("amountOut = %s", amountOut);
-        console.log(
-            "Balance of this address (in Y): %s",
-            IERC20(tokenOut).balanceOf(address(this))
-        );
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
             "token failed to be sent back"
@@ -134,7 +145,9 @@ contract Swap is DexProvider {
         Structs.AmountsToSendToAmm[] memory arbitrages
     ) private pure returns (uint256 totalOut) {
         totalOut = 0;
+        uint256 ySum = 0;
         for (uint256 i = 0; i < amms.length; i++) {
+            ySum += arbitrages[i].y;
             if (routes[i] + arbitrages[i].x != 0) {
                 totalOut += SharedFunctions.quantityOfYForX(
                     amms[i],
@@ -142,6 +155,7 @@ contract Swap is DexProvider {
                 );
             }
         }
+        totalOut -= ySum;
     }
 
     // @param tokenIn - the token which the user will provide/is wanting to sell
