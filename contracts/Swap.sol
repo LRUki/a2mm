@@ -67,17 +67,6 @@ contract Swap is DexProvider {
         }
 
         console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-
-        //        bool wasArbitrageDone = false;
-        //        for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-        //            if (arbitrageAmountsToSendToAmms[i].y != 0) {
-        //                wasArbitrageDone = true;
-        //                break;
-        //            }
-        //        }
 
         uint256 ySum = 0;
         for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
@@ -92,7 +81,10 @@ contract Swap is DexProvider {
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
+            console.log("yRequired = %s", yRequired);
+            console.log("ySum = %s", ySum);
             amountOut = yRequired - amountOfYtoFlashLoan;
+            console.log("amountOut = %s", amountOut);
             console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
@@ -108,7 +100,6 @@ contract Swap is DexProvider {
                 arbitrageAmountsToSendToAmms
             );
 
-            console.log("amountOut = %s", amountOut);
             console.log(
                 "end of flashSwap() - Balance of this address (in Y): %s",
                 IERC20(tokenOut).balanceOf(address(this))
@@ -158,6 +149,15 @@ contract Swap is DexProvider {
                 );
             }
         }
+
+//        uint256 onlyRoutes = 0;
+//        for (uint256 i = 0; i < amms.length; i++) {
+//            if (routes[i] != 0) {
+//                onlyRoutes += SharedFunctions.quantityOfYForX(amms[i], routes[i]);
+//            }
+//        }
+//        console.log("only routing = %s", onlyRoutes);
+
         totalOut -= ySum;
     }
 

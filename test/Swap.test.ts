@@ -200,15 +200,15 @@ describe("==================================== Swap ============================
   };
 
   const swapTestCases: SwapTestCaseParam[] = [];
-  for (let i = 0; i < 10; i++) {
-    swapTestCases.push([
-      Number(13679900 + 100 * i),
-      [Token.WETH, Token.UNI],
-      ethers.utils.parseEther("0.1"),
-      ethers.utils.parseEther("0.1"),
-    ] as SwapTestCaseParam);
-  }
-  for (let i = 0; i < 3; i++) {
+  // for (let i = 0; i < 10; i++) {
+  //   swapTestCases.push([
+  //     Number(13679900 + 100 * i),
+  //     [Token.WETH, Token.UNI],
+  //     ethers.utils.parseEther("0.1"),
+  //     ethers.utils.parseEther("0.1"),
+  //   ] as SwapTestCaseParam);
+  // }
+  for (let i = 0; i < 1; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
       [Token.WETH, Token.SHIBA],
