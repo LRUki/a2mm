@@ -77,12 +77,11 @@ contract Swap is DexProvider {
         //TODO: handle integer division error (there is leftover X in the user's account)
         uint256 amountOut = 0;
         if (didArbitrage) {
-            uint256 yRequired = _calculateTotalYOut(
+            amountOut = _calculateTotalYOut(
                 amms1,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            amountOut = yRequired - amountOfYtoFlashLoan;
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
