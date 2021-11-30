@@ -3,7 +3,8 @@ import { expect } from "chai";
 import { Token, tokenToAddress } from "../scripts/utils/Token";
 import {
   getBalanceOfERC20,
-  topUpWETHAndApproveContractToUse,
+  convertEthToWETH,
+  sendERC20,
 } from "../scripts/utils/ERC20";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Factory, factoryToAddress } from "../scripts/utils/Factory";
@@ -16,7 +17,7 @@ describe("==================================== DexProvider =====================
     await this.dexProvider.deployed();
   });
 
-  it("ReserveFeed fetches coorrect reserves", async function () {
+  it("ReserveFeed fetches correct reserves", async function () {
     let [reserveIn, reserveOut] = await this.dexProvider.getReserves(
       factoryToAddress[Factory.SUSHI],
       tokenToAddress[Token.WETH],
@@ -35,16 +36,12 @@ describe("==================================== DexProvider =====================
 
   it("executes swap", async function () {
     const [signer] = await ethers.getSigners();
-    const ethAmout = "5";
+    const ethAmout = ethers.utils.parseEther("0.1");
     const tokenIn = tokenToAddress[Token.WETH];
     const tokenOut = tokenToAddress[Token.UNI];
 
-    //here we need to first convert native ETH to ERC20 WETH
-    await topUpWETHAndApproveContractToUse(
-      signer,
-      ethAmout,
-      this.dexProvider.address
-    );
+    await convertEthToWETH(signer, ethAmout);
+    await sendERC20(signer, this.dexProvider.address, tokenIn, ethAmout);
     const [reserve0Before, reserve1Before]: BigNumber[] =
       await this.dexProvider.getReserves(
         factoryToAddress[Factory.SUSHI],
@@ -55,7 +52,7 @@ describe("==================================== DexProvider =====================
       factoryToAddress[Factory.SUSHI],
       tokenIn,
       tokenOut,
-      ethers.utils.parseEther(ethAmout).toString()
+      ethAmout.toString()
     );
     const txStatus = await tx.wait();
     const executeSwapEvent = txStatus.events.filter(
@@ -80,6 +77,7 @@ describe("==================================== DexProvider =====================
       this.dexProvider.address,
       tokenOut
     );
+
     expect(amountRecieved.eq(amountOut)).to.be.true;
   });
 });

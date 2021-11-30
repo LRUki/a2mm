@@ -2,10 +2,11 @@ import { ethers } from "hardhat";
 import { assert } from "chai";
 import { Token, tokenToAddress } from "./Token";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber } from "@ethersproject/bignumber";
 
 export const topUpWETHAndApproveContractToUse = async (
   signer: SignerWithAddress,
-  ethAmount: string,
+  ethAmount: BigNumber,
   contractAddressToApprove: string
 ) => {
   //buy WETH using native ETH
@@ -22,16 +23,15 @@ export const topUpWETHAndApproveContractToUse = async (
     tokenToAddress[Token.WETH]
   );
   assert(
-    amountOfWETHSignerRecieved.toString() ==
-      ethers.utils.parseEther(ethAmount).toString(),
+    amountOfWETHSignerRecieved.toString() == ethAmount,
     "signer didn't recieve WETH!"
   );
 };
 
 //swap signer's ETH to WETH
-const convertEthToWETH = async (
+export const convertEthToWETH = async (
   signer: SignerWithAddress,
-  amountOfEth: string
+  ethAmount: BigNumber
 ): Promise<void> => {
   const abi = ["function deposit() payable"];
   const tokenContract = new ethers.Contract(
@@ -39,14 +39,14 @@ const convertEthToWETH = async (
     abi,
     signer
   );
-  await tokenContract.deposit({ value: ethers.utils.parseEther(amountOfEth) });
+  await tokenContract.deposit({ value: ethAmount });
 };
 
 //approve the contract to use signer's WETH
 const approveOurContractToUseWETH = async (
   signer: SignerWithAddress,
   contractAddressToApprove: string,
-  amountOfEth: string
+  ethAmount: BigNumber
 ): Promise<void> => {
   const abi = [
     "function approve(address guy, uint wad) external returns (bool)",
@@ -56,23 +56,34 @@ const approveOurContractToUseWETH = async (
     abi,
     signer
   );
-  await tokenContract.approve(
-    contractAddressToApprove,
-    ethers.utils.parseEther(amountOfEth)
-  );
+  await tokenContract.approve(contractAddressToApprove, ethAmount);
+};
+
+//send erc20 to eth
+export const sendERC20 = async (
+  signer: SignerWithAddress,
+  addressToSend: string,
+  ERC20TokenAddress: string,
+  amountOfERC20: BigNumber
+): Promise<void> => {
+  const abi = [
+    "function transfer(address to, uint value) external returns (bool)",
+  ];
+  const tokenContract = new ethers.Contract(ERC20TokenAddress, abi, signer);
+  await tokenContract.transfer(addressToSend, amountOfERC20);
 };
 
 //returns the balance of ERC20 token that address holds
 export const getBalanceOfERC20 = async (
   address: string,
-  erc20TokenAddress: string
+  ERC20TokenAddress: string
 ) => {
   const [signer] = await ethers.getSigners();
   const abi = [
     "function balanceOf(address owner) external view returns (uint)",
   ];
   const tokenContract = new ethers.Contract(
-    erc20TokenAddress,
+    ERC20TokenAddress,
     abi,
     signer.provider
   );
