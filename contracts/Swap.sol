@@ -172,8 +172,6 @@ contract Swap is DexProvider {
         (
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
-            uint256 flashLoanRequired,
-
         ) = calculateRouteAndArbitarge(amms0, amountIn);
 
         return _calculateTotalYOut(amms1, routes, arbitrages);
