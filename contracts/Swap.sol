@@ -89,10 +89,17 @@ contract Swap is DexProvider {
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
+            console.log("yRequired + ySum = %s", yRequired + ySum);
+//            console.log("yRequired + ySum = %s", SharedFunctions.quantityOfYForX(amms1[whereToLoanIndex],
+//                routingAmountsToSendToAmms[whereToLoanIndex] +
+//                arbitrageAmountsToSendToAmms[whereToLoanIndex].x) + ySum);
             flashSwap(
                 tokenIn,
                 tokenOut,
-                yRequired + ySum,
+//                yRequired + ySum,
+                SharedFunctions.quantityOfYForX(amms1[whereToLoanIndex],
+                    routingAmountsToSendToAmms[whereToLoanIndex] +
+                    arbitrageAmountsToSendToAmms[whereToLoanIndex].x) /*+ ySum*/,
                 whereToLoan,
                 amountIn,
                 factoriesSupportingTokenPair,
@@ -158,6 +165,7 @@ contract Swap is DexProvider {
         //        }
         //        console.log("only routing = %s", onlyRoutes);
 
+        require(totalOut >= ySum, "subtraction overflow");
         totalOut -= ySum;
     }
 
