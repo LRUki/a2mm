@@ -66,57 +66,45 @@ contract Swap is DexProvider {
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
 
-        console.log("amountOfYtoFlashLoan = %s", amountOfYtoFlashLoan);
-
-        uint256 ySum = 0;
+        bool didArbitrage = false;
         for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-            ySum += arbitrageAmountsToSendToAmms[i].y;
+            if (arbitrageAmountsToSendToAmms[i].y != 0) {
+                didArbitrage = true;
+                break;
+            }
         }
 
-        //TODO: handle integer division error
+        //TODO: handle integer division error (there is leftover X in the user's account)
         uint256 amountOut = 0;
-        if (ySum > 0) {
+        if (didArbitrage) {
             uint256 yRequired = _calculateTotalYOut(
                 amms1,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            console.log("yRequired = %s", yRequired);
-            console.log("ySum = %s", ySum);
             amountOut = yRequired - amountOfYtoFlashLoan;
-            console.log("amountOut = %s", amountOut);
-            console.log("Arbitrage (requires flashswap anyway)");
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
-            console.log("yRequired + ySum = %s", yRequired + ySum);
-//            console.log("yRequired + ySum = %s", SharedFunctions.quantityOfYForX(amms1[whereToLoanIndex],
-//                routingAmountsToSendToAmms[whereToLoanIndex] +
-//                arbitrageAmountsToSendToAmms[whereToLoanIndex].x) + ySum);
             flashSwap(
                 tokenIn,
                 tokenOut,
-//                yRequired + ySum,
-                SharedFunctions.quantityOfYForX(amms1[whereToLoanIndex],
+                SharedFunctions.quantityOfYForX(
+                    amms1[whereToLoanIndex],
                     routingAmountsToSendToAmms[whereToLoanIndex] +
-                    arbitrageAmountsToSendToAmms[whereToLoanIndex].x) /*+ ySum*/,
+                        arbitrageAmountsToSendToAmms[whereToLoanIndex].x
+                ),
                 whereToLoan,
                 amountIn,
                 factoriesSupportingTokenPair,
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-
-            console.log(
-                "end of flashSwap() - Balance of this address (in Y): %s",
-                IERC20(tokenOut).balanceOf(address(this))
-            );
             require(
                 IERC20(tokenOut).balanceOf(address(this)) == amountOut,
-                "Predicted amountOut does not match actual"
+                "Predicted amountOut != actual"
             );
         } else {
-            console.log("only Routing");
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
                 assert(arbitrageAmountsToSendToAmms[i].x == 0);
                 if (routingAmountsToSendToAmms[i] > 0) {
@@ -156,14 +144,6 @@ contract Swap is DexProvider {
                 );
             }
         }
-
-        //        uint256 onlyRoutes = 0;
-        //        for (uint256 i = 0; i < amms.length; i++) {
-        //            if (routes[i] != 0) {
-        //                onlyRoutes += SharedFunctions.quantityOfYForX(amms[i], routes[i]);
-        //            }
-        //        }
-        //        console.log("only routing = %s", onlyRoutes);
 
         require(totalOut >= ySum, "subtraction overflow");
         totalOut -= ySum;
