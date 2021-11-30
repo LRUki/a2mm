@@ -251,6 +251,14 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+  for (let i = 0; i < 3; i++) {
+    swapTestCases.push([
+      Number(13679900 + 100 * i),
+      [Token.WETH, Token.SHIBA],
+      ethers.utils.parseEther("0.0000005"),
+      ethers.utils.parseEther("0.1"),
+    ] as SwapTestCaseParam);
+  }
 
   let worseCases = 0;
 
@@ -343,8 +351,8 @@ describe("==================================== Swap ============================
   });
 
   it("Percentage should be smaller than 30%", async function () {
-    let percentage = worseCases * 10;
-    // console.log(percentage)
+    let percentage = worseCases / swapTestCases.length * 100;
+    console.log(percentage)
     expect(percentage).to.lessThan(30);
   });
 });
