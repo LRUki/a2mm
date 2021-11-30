@@ -1,9 +1,11 @@
 export enum Token {
-  WETH,
-  UNI,
-  DAI,
-  USDT,
-  AXS,
+  WETH = "WETH",
+  UNI = "UNI",
+  DAI = "DAI",
+  USDT = "USDT",
+  AXS = "AXS",
+  TOKE = "TOKE",
+  SHIBA = "SHIBA",
 }
 
 export const tokenToDecimal = {
@@ -12,6 +14,8 @@ export const tokenToDecimal = {
   [Token.DAI]: 18,
   [Token.USDT]: 6,
   [Token.AXS]: 18,
+  [Token.TOKE]: 18,
+  [Token.SHIBA]: 18,
 };
 
 export const tokenToAddress = {
@@ -20,4 +24,6 @@ export const tokenToAddress = {
   [Token.DAI]: "0x6b175474e89094c44da98b954eedeac495271d0f",
   [Token.USDT]: "0xdac17f958d2ee523a2206206994597c13d831ec7",
   [Token.AXS]: "0xbb0e17ef65f82ab018d8edd776e8dd940327b28b",
+  [Token.TOKE]: "0x2e9d63788249371f1DFC918a52f8d799F4a38C94",
+  [Token.SHIBA]: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
 };
