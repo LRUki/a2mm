@@ -176,8 +176,7 @@ contract Swap is DexProvider {
 
         ) = calculateRouteAndArbitarge(amms0, amountIn);
 
-        return
-            _calculateTotalYOut(amms1, routes, arbitrages) - flashLoanRequired;
+        return _calculateTotalYOut(amms1, routes, arbitrages);
     }
 
     // @param arbitragingFor - the token which the user will provide/is wanting to arbitrage for
