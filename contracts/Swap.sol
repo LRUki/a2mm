@@ -28,7 +28,16 @@ contract Swap is DexProvider {
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) external {
+    ) public {
+        swapWithSlippage(tokenIn, tokenOut, amountIn, uint256(0));
+    }
+
+    function swapWithSlippage(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minimumAcceptedAmount
+    ) public {
         require(
             IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
             "user needs to approve"
@@ -76,12 +85,17 @@ contract Swap is DexProvider {
 
         //TODO: handle integer division error (there is leftover X in the user's account)
         uint256 amountOut = 0;
+        amountOut = _calculateTotalYOut(
+            amms1,
+            routingAmountsToSendToAmms,
+            arbitrageAmountsToSendToAmms
+        );
+        require(
+            amountOut > minimumAcceptedAmount,
+            "Slippage tolerance exceeded"
+        );
+
         if (didArbitrage) {
-            amountOut = _calculateTotalYOut(
-                amms1,
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms
-            );
             address whereToLoan = factoriesSupportingTokenPair[
                 whereToLoanIndex
             ];
@@ -99,15 +113,11 @@ contract Swap is DexProvider {
                 routingAmountsToSendToAmms,
                 arbitrageAmountsToSendToAmms
             );
-            require(
-                IERC20(tokenOut).balanceOf(address(this)) == amountOut,
-                "Predicted amountOut != actual"
-            );
         } else {
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
                 assert(arbitrageAmountsToSendToAmms[i].x == 0);
                 if (routingAmountsToSendToAmms[i] > 0) {
-                    amountOut += executeSwap(
+                    executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
@@ -116,6 +126,11 @@ contract Swap is DexProvider {
                 }
             }
         }
+
+        require(
+            IERC20(tokenOut).balanceOf(address(this)) == amountOut,
+            "Predicted amountOut != actual"
+        );
         require(
             IERC20(tokenOut).transfer(msg.sender, amountOut),
             "token failed to be sent back"
@@ -172,6 +187,8 @@ contract Swap is DexProvider {
         (
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
+            ,
+
         ) = calculateRouteAndArbitarge(amms0, amountIn);
 
         return _calculateTotalYOut(amms1, routes, arbitrages);
