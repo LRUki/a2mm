@@ -32,7 +32,6 @@ async function main() {
   );
 
   const abiString = JSON.stringify({
-    contractAddress: contractAddress,
     contractAbi: abi
   });
 
