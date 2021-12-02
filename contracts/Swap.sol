@@ -65,7 +65,10 @@ contract Swap is DexProvider {
             );
             swapHelper.amms1 = new Structs.Amm[](amms0.length);
             for (uint256 i = 0; i < amms0.length; i++) {
-                (swapHelper.amms1[i].x, swapHelper.amms1[i].y) = (amms0[i].x, amms0[i].y);
+                (swapHelper.amms1[i].x, swapHelper.amms1[i].y) = (
+                    amms0[i].x,
+                    amms0[i].y
+                );
             }
 
             require(
@@ -80,7 +83,6 @@ contract Swap is DexProvider {
                 whereToLoanIndex
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
-
 
         //TODO: handle integer division error (there is leftover X in the user's account)
         (swapHelper.amountOut, swapHelper.ySum) = _calculateTotalYOut(
@@ -102,12 +104,12 @@ contract Swap is DexProvider {
             uint256 yFromLoanAmm = SharedFunctions.quantityOfYForX(
                 swapHelper.amms1[whereToLoanIndex],
                 routingAmountsToSendToAmms[whereToLoanIndex] +
-                arbitrageAmountsToSendToAmms[whereToLoanIndex].x
+                    arbitrageAmountsToSendToAmms[whereToLoanIndex].x
             );
             flashSwap(
                 tokenIn,
                 tokenOut,
-                yFromLoanAmm > swapHelper.ySum ? yFromLoanAmm : swapHelper.ySum,
+                yFromLoanAmm,
                 whereToLoan,
                 amountIn,
                 factoriesSupportingTokenPair,
