@@ -203,7 +203,7 @@ contract DexProvider is IUniswapV2Callee {
 
             data = abi.encode(
                 newFactoriesSupportingTokenPair,
-                amountsToSendToAmms,
+                newAmountsToSendToAmms,
                 whereToLoan,
                 amountIn,
                 ySum,
