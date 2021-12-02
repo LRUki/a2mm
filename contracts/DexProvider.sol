@@ -378,23 +378,12 @@ contract DexProvider is IUniswapV2Callee {
             }
         }
 
-        for (uint256 i = 0; i < v2CallHelper.amountsToSendToAmms.length; i++) {
-            uint256 xToSend = v2CallHelper.amountsToSendToAmms[i].x;
-            if (xToSend != 0) {
-                require(
-                    v2CallHelper.factoriesSupportingTokenPair[i] !=
-                        v2CallHelper.whereToRepayLoan,
-                    "Can't swap where borrowing"
-                );
-                executeSwap(
-                    v2CallHelper.factoriesSupportingTokenPair[i],
-                    v2CallHelper.tokenIn,
-                    v2CallHelper.tokenOut,
-                    xToSend
-                );
-            }
+        for (uint256 i = 0; i < v2CallHelper.xToYSwaps.length; i++) {
+            TransferHelper.safeTransfer(v2CallHelper.tokenIn, v2CallHelper.xToYSwapsFactories[i], v2CallHelper.xToYSwaps[i]);
         }
 
-        assert(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0);
+        console.log();
+        console.log("leftover X = %s", IERC20(v2CallHelper.tokenIn).balanceOf(address(this)));
+        require(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0, "All of X should be spent");
     }
 }
