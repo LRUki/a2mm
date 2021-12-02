@@ -70,7 +70,11 @@ contract Swap is DexProvider {
             ) = calculateRouteAndArbitrageCombined(amms0, amountIn);
         }
 
-        (swapHelper.amountOut, swapHelper.ySum, swapHelper.noOfXToYSwaps) = _calculateTotalYOut(
+        (
+            swapHelper.amountOut,
+            swapHelper.ySum,
+            swapHelper.noOfXToYSwaps
+        ) = _calculateTotalYOut(
             swapHelper.amms1,
             swapHelper.amountsToSendToAmms
         );
@@ -81,13 +85,21 @@ contract Swap is DexProvider {
 
         if (swapHelper.ySum > 0) {
             swapHelper.xToYSwaps = new uint256[](swapHelper.noOfXToYSwaps);
-            swapHelper.xToYSwapsFactories = new address[](swapHelper.noOfXToYSwaps);
+            swapHelper.xToYSwapsFactories = new address[](
+                swapHelper.noOfXToYSwaps
+            );
             uint256 j = 0;
             for (uint256 i = 0; i < swapHelper.amms1.length; i++) {
                 if (swapHelper.amountsToSendToAmms[i].x != 0) {
-                    require(swapHelper.amountsToSendToAmms[i].y == 0, "Can't swap both X and Y");
-                    swapHelper.xToYSwaps[j] = swapHelper.amountsToSendToAmms[i].x;
-                    swapHelper.xToYSwapsFactories[j++] = swapHelper.factoriesSupportingTokenPair[i];
+                    require(
+                        swapHelper.amountsToSendToAmms[i].y == 0,
+                        "Can't swap both X and Y"
+                    );
+                    swapHelper.xToYSwaps[j] = swapHelper
+                        .amountsToSendToAmms[i]
+                        .x;
+                    swapHelper.xToYSwapsFactories[j++] = swapHelper
+                        .factoriesSupportingTokenPair[i];
                 }
             }
             flashSwap(
@@ -139,7 +151,15 @@ contract Swap is DexProvider {
         Structs.Amm[] memory amms,
         uint256[] memory routes,
         Structs.AmountsToSendToAmm[] memory arbitrages
-    ) private pure returns (uint256 totalOut, uint256 ySum, uint256 noOfXToYSwaps) {
+    )
+        private
+        pure
+        returns (
+            uint256 totalOut,
+            uint256 ySum,
+            uint256 noOfXToYSwaps
+        )
+    {
         totalOut = 0;
         ySum = 0;
         noOfXToYSwaps = 0;
@@ -165,7 +185,15 @@ contract Swap is DexProvider {
     function _calculateTotalYOut(
         Structs.Amm[] memory amms,
         Structs.AmountsToSendToAmm[] memory amountsToSendToAmms
-    ) private pure returns (uint256 totalOut, uint256 ySum, uint256 noOfXToYSwaps) {
+    )
+        private
+        pure
+        returns (
+            uint256 totalOut,
+            uint256 ySum,
+            uint256 noOfXToYSwaps
+        )
+    {
         totalOut = 0;
         ySum = 0;
         noOfXToYSwaps = 0;
@@ -210,7 +238,7 @@ contract Swap is DexProvider {
 
         ) = calculateRouteAndArbitrage(amms0, amountIn);
 
-        (totalGain, ,) = _calculateTotalYOut(amms1, routes, arbitrages);
+        (totalGain, , ) = _calculateTotalYOut(amms1, routes, arbitrages);
     }
 
     // @param arbitragingFor - the token which the user will provide/is wanting to arbitrage for

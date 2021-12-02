@@ -174,7 +174,9 @@ contract DexProvider is IUniswapV2Callee {
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; i++) {
                 if (amountsToSendToAmms[i].x != 0) {
                     assert(amountsToSendToAmms[i].y == 0);
-                    flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[i];
+                    flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[
+                        i
+                    ];
                     flashSwapHelper.whereToLoanIndex = i;
                     break;
                 }
@@ -193,17 +195,25 @@ contract DexProvider is IUniswapV2Callee {
             flashSwapHelper.newFactoriesSupportingTokenPair = new address[](
                 factoriesSupportingTokenPair.length - 1
             );
-            flashSwapHelper.newAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
-                    amountsToSendToAmms.length - 1
-                );
+            flashSwapHelper
+                .newAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+                amountsToSendToAmms.length - 1
+            );
             Structs.Amm[] memory newAmms = new Structs.Amm[](amms.length - 1);
             {
                 uint256 j = 0;
                 for (uint256 i = 0; i < amountsToSendToAmms.length; i++) {
-                    if (factoriesSupportingTokenPair[i] != flashSwapHelper.whereToLoan) {
-                        flashSwapHelper.newFactoriesSupportingTokenPair[j] = factoriesSupportingTokenPair[i];
+                    if (
+                        factoriesSupportingTokenPair[i] !=
+                        flashSwapHelper.whereToLoan
+                    ) {
+                        flashSwapHelper.newFactoriesSupportingTokenPair[
+                                j
+                            ] = factoriesSupportingTokenPair[i];
                         newAmms[j] = amms[i];
-                        flashSwapHelper.newAmountsToSendToAmms[j++] = amountsToSendToAmms[i];
+                        flashSwapHelper.newAmountsToSendToAmms[
+                                j++
+                            ] = amountsToSendToAmms[i];
                     }
                 }
             }
@@ -222,10 +232,8 @@ contract DexProvider is IUniswapV2Callee {
             );
         }
 
-        address pairAddress = IUniswapV2Factory(flashSwapHelper.whereToLoan).getPair(
-            tokenIn,
-            tokenOut
-        );
+        address pairAddress = IUniswapV2Factory(flashSwapHelper.whereToLoan)
+            .getPair(tokenIn, tokenOut);
 
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
@@ -268,52 +276,52 @@ contract DexProvider is IUniswapV2Callee {
 
         V2CallHelper memory v2CallHelper;
         (
-        v2CallHelper.factoriesSupportingTokenPair,
-        v2CallHelper.amountsToSendToAmms,
-        v2CallHelper.amms,
-        v2CallHelper.whereToRepayLoan,
-        v2CallHelper.amountIn,
-        ,
-        ,
-        ,
+            v2CallHelper.factoriesSupportingTokenPair,
+            v2CallHelper.amountsToSendToAmms,
+            v2CallHelper.amms,
+            v2CallHelper.whereToRepayLoan,
+            v2CallHelper.amountIn,
+            ,
+            ,
+            ,
 
         ) = abi.decode(
             data,
             (
-            address[],
-            Structs.AmountsToSendToAmm[],
-            Structs.Amm[],
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256[],
-            address[]
+                address[],
+                Structs.AmountsToSendToAmm[],
+                Structs.Amm[],
+                address,
+                uint256,
+                uint256,
+                uint256,
+                uint256[],
+                address[]
             )
         );
         // have to do it twice due to stack too deep...
         (
-        ,
-        ,
-        ,
-        ,
-        ,
-        v2CallHelper.noOfXToYSwapsLeft,
-        v2CallHelper.totalYBorrowedBefore,
-        v2CallHelper.xToYSwaps,
-        v2CallHelper.xToYSwapsFactories
+            ,
+            ,
+            ,
+            ,
+            ,
+            v2CallHelper.noOfXToYSwapsLeft,
+            v2CallHelper.totalYBorrowedBefore,
+            v2CallHelper.xToYSwaps,
+            v2CallHelper.xToYSwapsFactories
         ) = abi.decode(
             data,
             (
-            address[],
-            Structs.AmountsToSendToAmm[],
-            Structs.Amm[],
-            address,
-            uint256,
-            uint256,
-            uint256,
-            uint256[],
-            address[]
+                address[],
+                Structs.AmountsToSendToAmm[],
+                Structs.Amm[],
+                address,
+                uint256,
+                uint256,
+                uint256,
+                uint256[],
+                address[]
             )
         );
 
