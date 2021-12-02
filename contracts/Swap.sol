@@ -255,7 +255,9 @@ contract Swap is DexProvider {
         ) = Route.route(amms, amountOfX);
 
         amountOfYtoFlashLoan = 0;
-        arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](amms.length);
+        arbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+            amms.length
+        );
         if (shouldArbitrage && amms.length > 1) {
             (
                 arbitrageAmountsToSendToAmms,
