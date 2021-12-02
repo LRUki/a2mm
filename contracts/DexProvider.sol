@@ -211,11 +211,11 @@ contract DexProvider is IUniswapV2Callee {
         v2CallHelper.yGross = 0;
         {
             (
-            v2CallHelper.factoriesSupportingTokenPair,
-            v2CallHelper.routingAmountsToSendToAmms,
-            v2CallHelper.arbitrageAmountsToSendToAmms,
-            v2CallHelper.whereToRepayLoan,
-            v2CallHelper.xGross
+                v2CallHelper.factoriesSupportingTokenPair,
+                v2CallHelper.routingAmountsToSendToAmms,
+                v2CallHelper.arbitrageAmountsToSendToAmms,
+                v2CallHelper.whereToRepayLoan,
+                v2CallHelper.xGross
             ) = abi.decode(
                 data,
                 (
@@ -233,10 +233,8 @@ contract DexProvider is IUniswapV2Callee {
 
                 assert(
                     msg.sender ==
-                        IUniswapV2Factory(v2CallHelper.whereToRepayLoan).getPair(
-                            token0,
-                            token1
-                        )
+                        IUniswapV2Factory(v2CallHelper.whereToRepayLoan)
+                            .getPair(token0, token1)
                 );
 
                 (v2CallHelper.tokenIn, v2CallHelper.tokenOut) = amount0Out == 0
@@ -244,36 +242,50 @@ contract DexProvider is IUniswapV2Callee {
                     : (token1, token0);
             }
 
-            for (uint256 i = 0; i < v2CallHelper.arbitrageAmountsToSendToAmms.length; i++) {
+            for (
+                uint256 i = 0;
+                i < v2CallHelper.arbitrageAmountsToSendToAmms.length;
+                i++
+            ) {
                 if (v2CallHelper.arbitrageAmountsToSendToAmms[i].y != 0) {
                     v2CallHelper.xGross += executeSwap(
                         v2CallHelper.factoriesSupportingTokenPair[i],
-                            v2CallHelper.tokenOut,
-                            v2CallHelper.tokenIn,
-                            v2CallHelper.arbitrageAmountsToSendToAmms[i].y
+                        v2CallHelper.tokenOut,
+                        v2CallHelper.tokenIn,
+                        v2CallHelper.arbitrageAmountsToSendToAmms[i].y
                     );
                 }
             }
 
-            for (uint256 i = 0; i < v2CallHelper.arbitrageAmountsToSendToAmms.length; i++) {
-                uint256 xToSend = v2CallHelper.arbitrageAmountsToSendToAmms[i].x +
-                v2CallHelper.routingAmountsToSendToAmms[i];
+            for (
+                uint256 i = 0;
+                i < v2CallHelper.arbitrageAmountsToSendToAmms.length;
+                i++
+            ) {
+                uint256 xToSend = v2CallHelper
+                    .arbitrageAmountsToSendToAmms[i]
+                    .x + v2CallHelper.routingAmountsToSendToAmms[i];
                 if (xToSend != 0) {
                     require(
-                        v2CallHelper.factoriesSupportingTokenPair[i] != v2CallHelper.whereToRepayLoan,
+                        v2CallHelper.factoriesSupportingTokenPair[i] !=
+                            v2CallHelper.whereToRepayLoan,
                         "Can't' swap where borrowing"
                     );
                     v2CallHelper.xGross -= xToSend;
                     v2CallHelper.yGross += executeSwap(
                         v2CallHelper.factoriesSupportingTokenPair[i],
-                            v2CallHelper.tokenIn,
-                            v2CallHelper.tokenOut,
+                        v2CallHelper.tokenIn,
+                        v2CallHelper.tokenOut,
                         xToSend
                     );
                 }
             }
         }
-        TransferHelper.safeTransfer(v2CallHelper.tokenIn, msg.sender, v2CallHelper.xGross);
+        TransferHelper.safeTransfer(
+            v2CallHelper.tokenIn,
+            msg.sender,
+            v2CallHelper.xGross
+        );
         assert(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0);
     }
 }
