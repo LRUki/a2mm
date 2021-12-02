@@ -106,9 +106,12 @@ contract Swap is DexProvider {
                 yFromLoanAmm,
                 whereToLoan,
                 amountIn,
+                swapHelper.ySum,
+                0,
                 swapHelper.factoriesSupportingTokenPair,
                 swapHelper.routingAmountsToSendToAmms,
-                swapHelper.arbitrageAmountsToSendToAmms
+                swapHelper.arbitrageAmountsToSendToAmms,
+                swapHelper.amms1
             );
         } else {
             for (
