@@ -335,10 +335,20 @@ contract DexProvider is IUniswapV2Callee {
         }
 
         for (uint256 i = 0; i < v2CallHelper.xToYSwaps.length; i++) {
-            TransferHelper.safeTransfer(v2CallHelper.tokenIn, IUniswapV2Factory(v2CallHelper.xToYSwapsFactories[i]).getPair(token0, token1), v2CallHelper.xToYSwaps[i]);
+            TransferHelper.safeTransfer(
+                v2CallHelper.tokenIn,
+                IUniswapV2Factory(v2CallHelper.xToYSwapsFactories[i]).getPair(
+                    token0,
+                    token1
+                ),
+                v2CallHelper.xToYSwaps[i]
+            );
         }
 
-        console.log("leftover X = %s", IERC20(v2CallHelper.tokenIn).balanceOf(address(this)));
-//        require(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0, "All of X should be spent");
+        console.log(
+            "leftover X = %s",
+            IERC20(v2CallHelper.tokenIn).balanceOf(address(this))
+        );
+        //        require(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0, "All of X should be spent");
     }
 }
