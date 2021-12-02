@@ -36,6 +36,11 @@ contract Swap is DexProvider {
         Structs.Amm[] amms1;
         uint256 amountOut;
         uint256 ySum;
+        address[] factoriesSupportingTokenPair;
+        uint256[] routingAmountsToSendToAmms;
+        uint256 amountOfYtoFlashLoan;
+        uint256 whereToLoanIndex;
+        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
     }
 
     function swapWithSlippage(
@@ -49,20 +54,15 @@ contract Swap is DexProvider {
             "user needs to approve"
         );
 
-        address[] memory factoriesSupportingTokenPair;
-        uint256[] memory routingAmountsToSendToAmms;
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms;
-        uint256 amountOfYtoFlashLoan;
-        uint256 whereToLoanIndex;
         //TODO: since calculateRouteAndArbitarge is public, does it still take things by reference? If not, then the below lines of copying the amms can be deleted.
         // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
         SwapHelper memory swapHelper;
         {
             Structs.Amm[] memory amms0;
-            (factoriesSupportingTokenPair, amms0) = _factoriesWhichSupportPair(
-                tokenIn,
-                tokenOut
-            );
+            (
+                swapHelper.factoriesSupportingTokenPair,
+                amms0
+            ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
             swapHelper.amms1 = new Structs.Amm[](amms0.length);
             for (uint256 i = 0; i < amms0.length; i++) {
                 (swapHelper.amms1[i].x, swapHelper.amms1[i].y) = (
@@ -72,39 +72,45 @@ contract Swap is DexProvider {
             }
 
             require(
-                factoriesSupportingTokenPair.length > 0,
+                swapHelper.factoriesSupportingTokenPair.length > 0,
                 "no AMMs avilable"
             );
 
             (
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms,
-                amountOfYtoFlashLoan,
-                whereToLoanIndex
+                swapHelper.routingAmountsToSendToAmms,
+                swapHelper.arbitrageAmountsToSendToAmms,
+                swapHelper.amountOfYtoFlashLoan,
+                swapHelper.whereToLoanIndex
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
 
         //TODO: handle integer division error (there is leftover X in the user's account)
         (swapHelper.amountOut, swapHelper.ySum) = _calculateTotalYOut(
             swapHelper.amms1,
-            routingAmountsToSendToAmms,
-            arbitrageAmountsToSendToAmms
+            swapHelper.routingAmountsToSendToAmms,
+            swapHelper.arbitrageAmountsToSendToAmms
         );
-        console.log("swapHelper.ySum = %s", swapHelper.ySum);
-        console.log("swapHelper.amountOut = %s", swapHelper.amountOut);
+        //        console.log("swapHelper.ySum = %s", swapHelper.ySum);
+        //        console.log("swapHelper.amountOut = %s", swapHelper.amountOut);
         require(
             swapHelper.amountOut > minimumAcceptedAmount,
             "Slippage tolerance exceeded"
         );
 
         if (swapHelper.ySum > 0) {
-            address whereToLoan = factoriesSupportingTokenPair[
-                whereToLoanIndex
+            address whereToLoan = swapHelper.factoriesSupportingTokenPair[
+                swapHelper.whereToLoanIndex
             ];
             uint256 yFromLoanAmm = SharedFunctions.quantityOfYForX(
-                swapHelper.amms1[whereToLoanIndex],
-                routingAmountsToSendToAmms[whereToLoanIndex] +
-                    arbitrageAmountsToSendToAmms[whereToLoanIndex].x
+                swapHelper.amms1[swapHelper.whereToLoanIndex],
+                swapHelper.routingAmountsToSendToAmms[
+                    swapHelper.whereToLoanIndex
+                ] +
+                    swapHelper
+                        .arbitrageAmountsToSendToAmms[
+                            swapHelper.whereToLoanIndex
+                        ]
+                        .x
             );
             flashSwap(
                 tokenIn,
@@ -112,19 +118,23 @@ contract Swap is DexProvider {
                 yFromLoanAmm,
                 whereToLoan,
                 amountIn,
-                factoriesSupportingTokenPair,
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms
+                swapHelper.factoriesSupportingTokenPair,
+                swapHelper.routingAmountsToSendToAmms,
+                swapHelper.arbitrageAmountsToSendToAmms
             );
         } else {
-            for (uint256 i = 0; i < factoriesSupportingTokenPair.length; ++i) {
-                assert(arbitrageAmountsToSendToAmms[i].x == 0);
-                if (routingAmountsToSendToAmms[i] > 0) {
+            for (
+                uint256 i = 0;
+                i < swapHelper.factoriesSupportingTokenPair.length;
+                ++i
+            ) {
+                assert(swapHelper.arbitrageAmountsToSendToAmms[i].x == 0);
+                if (swapHelper.routingAmountsToSendToAmms[i] > 0) {
                     executeSwap(
-                        factoriesSupportingTokenPair[i],
+                        swapHelper.factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        routingAmountsToSendToAmms[i]
+                        swapHelper.routingAmountsToSendToAmms[i]
                     );
                 }
             }

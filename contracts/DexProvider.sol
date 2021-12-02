@@ -238,28 +238,28 @@ contract DexProvider is IUniswapV2Callee {
                     : (token1, token0);
             }
 
-            console.log(
-                "amount0Out + amount1Out = %s",
-                amount0Out + amount1Out
-            );
-            uint256 count = 0;
-            for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                if (arbitrageAmountsToSendToAmms[i].y != 0) {
-                    count += 1;
-                }
-            }
-            console.log("Y->X number of transactions = %s", count);
+            //            console.log(
+            //                "amount0Out + amount1Out = %s",
+            //                amount0Out + amount1Out
+            //            );
+            //            uint256 count = 0;
+            //            for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
+            //                if (arbitrageAmountsToSendToAmms[i].y != 0) {
+            //                    count += 1;
+            //                }
+            //            }
+            //            console.log("Y->X number of transactions = %s", count);
 
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 if (arbitrageAmountsToSendToAmms[i].y != 0) {
-                    console.log(
-                        "We have %s of Y here.",
-                        IERC20(tokenOut).balanceOf(address(this))
-                    );
-                    console.log(
-                        "We want to swap %s of it for X.",
-                        arbitrageAmountsToSendToAmms[i].y
-                    );
+                    //                    console.log(
+                    //                        "We have %s of Y here.",
+                    //                        IERC20(tokenOut).balanceOf(address(this))
+                    //                    );
+                    //                    console.log(
+                    //                        "We want to swap %s of it for X.",
+                    //                        arbitrageAmountsToSendToAmms[i].y
+                    //                    );
                     xGross += executeSwap(
                         factoriesSupportingTokenPair[i],
                         tokenOut,
@@ -272,10 +272,11 @@ contract DexProvider is IUniswapV2Callee {
             for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
                 uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
                     routingAmountsToSendToAmms[i];
-                if (
-                    xToSend != 0 &&
-                    factoriesSupportingTokenPair[i] != whereToRepayLoan
-                ) {
+                if (xToSend != 0) {
+                    require(
+                        factoriesSupportingTokenPair[i] != whereToRepayLoan,
+                        "Can't' swap where borrowing"
+                    );
                     xGross -= xToSend;
                     yGross += executeSwap(
                         factoriesSupportingTokenPair[i],
@@ -288,10 +289,10 @@ contract DexProvider is IUniswapV2Callee {
         }
         TransferHelper.safeTransfer(tokenIn, msg.sender, xGross);
 
-        console.log(
-            "After UniswapV2Call, we have %s of Y here.",
-            IERC20(tokenOut).balanceOf(address(this))
-        );
+        //        console.log(
+        //            "After UniswapV2Call, we have %s of Y here.",
+        //            IERC20(tokenOut).balanceOf(address(this))
+        //        );
         assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
     }
 }
