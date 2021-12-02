@@ -16,15 +16,7 @@ library Arbitrage {
     function arbitrageWrapper(
         uint256[2][] memory ammsArray,
         uint256 amountOfYHeld
-    )
-        public
-        pure
-        returns (
-            Structs.AmountsToSendToAmm[] memory,
-            uint256,
-            uint256 whereToLoanIndex
-        )
-    {
+    ) public pure returns (Structs.AmountsToSendToAmm[] memory, uint256) {
         Structs.Amm[] memory amms = new Structs.Amm[](ammsArray.length);
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
@@ -45,8 +37,7 @@ library Arbitrage {
         pure
         returns (
             Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
-            uint256 flashLoanRequiredAmount,
-            uint256 whereToLoanIndex
+            uint256 flashLoanRequiredAmount
         )
     {
         require(amms.length >= 2, "Need at least 2 AMMs in 'amms'");
@@ -249,11 +240,7 @@ library Arbitrage {
                 break;
             }
         }
-        return (
-            amountsToSendToAmms,
-            flashLoanRequiredAmount,
-            arbHelper.sortedAmmIndices[arbHelper.sortedAmmIndices.length - 1]
-        );
+        return (amountsToSendToAmms, flashLoanRequiredAmount);
     }
 
     //(Appendix B, formula 22)

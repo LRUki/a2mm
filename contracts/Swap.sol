@@ -65,18 +65,13 @@ contract Swap is DexProvider {
             );
 
             (
-                swapHelper.routingAmountsToSendToAmms,
-                swapHelper.arbitrageAmountsToSendToAmms,
-                ,
-                swapHelper.whereToLoanIndex
-            ) = calculateRouteAndArbitrage(amms0, amountIn);
+                swapHelper.amountsToSendToAmms,
+            ) = calculateRouteAndArbitrageCombined(amms0, amountIn);
         }
 
-        //TODO: handle integer division error (there is leftover X in the user's account)
         (swapHelper.amountOut, swapHelper.ySum) = _calculateTotalYOut(
             swapHelper.amms1,
-            swapHelper.routingAmountsToSendToAmms,
-            swapHelper.arbitrageAmountsToSendToAmms
+            swapHelper.amountsToSendToAmms
         );
         require(
             swapHelper.amountOut > minimumAcceptedAmount,
@@ -84,32 +79,14 @@ contract Swap is DexProvider {
         );
 
         if (swapHelper.ySum > 0) {
-            address whereToLoan = swapHelper.factoriesSupportingTokenPair[
-                swapHelper.whereToLoanIndex
-            ];
-            uint256 yFromLoanAmm = SharedFunctions.quantityOfYForX(
-                swapHelper.amms1[swapHelper.whereToLoanIndex],
-                swapHelper.routingAmountsToSendToAmms[
-                    swapHelper.whereToLoanIndex
-                ] +
-                    swapHelper
-                        .arbitrageAmountsToSendToAmms[
-                            swapHelper.whereToLoanIndex
-                        ]
-                        .x
-            );
-
             flashSwap(
                 tokenIn,
                 tokenOut,
-                yFromLoanAmm,
-                whereToLoan,
                 amountIn,
                 swapHelper.ySum,
                 0,
                 swapHelper.factoriesSupportingTokenPair,
-                swapHelper.routingAmountsToSendToAmms,
-                swapHelper.arbitrageAmountsToSendToAmms,
+                swapHelper.amountsToSendToAmms,
                 swapHelper.amms1
             );
         } else {
@@ -118,13 +95,12 @@ contract Swap is DexProvider {
                 i < swapHelper.factoriesSupportingTokenPair.length;
                 ++i
             ) {
-                assert(swapHelper.arbitrageAmountsToSendToAmms[i].x == 0);
-                if (swapHelper.routingAmountsToSendToAmms[i] > 0) {
+                if (swapHelper.amountsToSendToAmms[i].x > 0) {
                     executeSwap(
                         swapHelper.factoriesSupportingTokenPair[i],
                         tokenIn,
                         tokenOut,
-                        swapHelper.routingAmountsToSendToAmms[i]
+                        swapHelper.amountsToSendToAmms[i].x
                     );
                 }
             }
@@ -167,6 +143,27 @@ contract Swap is DexProvider {
         totalOut -= ySum;
     }
 
+    // @param amms - the state of the AMMs we are considering the transactions on
+    // @param amountsToSendToAmms - the amounts of X and Y we are using
+    // @return totalOut - assuming that arbitrage did not need a flash loan, this will be the amount of Y the user would get for making these trades
+    // @return ySum - The total amount of Y exchanged for X over the AMMs
+    function _calculateTotalYOut(
+        Structs.Amm[] memory amms,
+        Structs.AmountsToSendToAmm[] memory amountsToSendToAmms
+    ) private pure returns (uint256 totalOut, uint256 ySum) {
+        totalOut = 0;
+        ySum = 0;
+        for (uint256 i = 0; i < amms.length; i++) {
+            ySum += amountsToSendToAmms[i].y;
+            if (amountsToSendToAmms[i].x != 0) {
+                totalOut += SharedFunctions.quantityOfYForX(amms[i], amountsToSendToAmms[i].x);
+            }
+        }
+
+        require(totalOut >= ySum, "subtraction overflow");
+        totalOut -= ySum;
+    }
+
     // @param tokenIn - the token which the user will provide/is wanting to sell
     // @param tokenOut - the token which the user will be given/is wanting to buy
     // @param amountIn - how much of tokenIn the user is wanting to exchange for totalOut amount of tokenOut
@@ -190,7 +187,6 @@ contract Swap is DexProvider {
         (
             uint256[] memory routes,
             Structs.AmountsToSendToAmm[] memory arbitrages,
-            ,
 
         ) = calculateRouteAndArbitrage(amms0, amountIn);
 
@@ -217,7 +213,7 @@ contract Swap is DexProvider {
         }
 
         Structs.AmountsToSendToAmm[] memory arbitrages;
-        (arbitrages, tokenInRequired, ) = Arbitrage.arbitrageForY(amms0, 0);
+        (arbitrages, tokenInRequired) = Arbitrage.arbitrageForY(amms0, 0);
         arbitrageGain = 0;
         for (uint256 i = 0; i < amms0.length; i++) {
             arbitrageGain += SharedFunctions.quantityOfYForX(
@@ -227,11 +223,40 @@ contract Swap is DexProvider {
         }
     }
 
-    // @notice - for now, only the first two AMMs in the list will actually be considered for anything
     // @param amountOfX - how much the user is willing to trade
     // @return amountsToSendToAmms - the pair of values indicating how much of X and Y should be sent to each AMM \
     // (ordered in the same way as the AMMs were passed in)
-    // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully \
+    // @return amountOfYtoFlashLoan - how big of a flash loan we would need to take out to successfully \
+    // complete the transation. This is done for the arbitrage step.
+    function calculateRouteAndArbitrageCombined(
+        Structs.Amm[] memory amms,
+        uint256 amountOfX
+    )
+        public
+        pure
+        returns (
+            Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
+            uint256 amountOfYtoFlashLoan
+        )
+    {
+        uint256[] memory routingAmountsToSendToAmms;
+        (
+            routingAmountsToSendToAmms,
+            amountsToSendToAmms,
+            amountOfYtoFlashLoan
+        ) = calculateRouteAndArbitrage(amms, amountOfX);
+
+        for (uint256 i = 0; i < amms.length; i++) {
+            amountsToSendToAmms[i].x += routingAmountsToSendToAmms[i];
+        }
+    }
+
+    // @param amountOfX - how much the user is willing to trade
+    // @return routingAmountsToSendToAmms - the amounts of X we have decided needs to be sent to each AMM for \
+    // optimal routing
+    // @return arbitrageAmountsToSendToAmms - the pair of values indicating how much of X and Y should be sent \
+    // to each AMM (ordered in the same way as the AMMs were passed in) according to arbitrage
+    // @return amountOfYtoFlashLoan - how big of a flash loan we would need to take out to successfully \
     // complete the transation. This is done for the arbitrage step.
     function calculateRouteAndArbitrage(
         Structs.Amm[] memory amms,
@@ -242,11 +267,9 @@ contract Swap is DexProvider {
         returns (
             uint256[] memory routingAmountsToSendToAmms,
             Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
-            uint256 amountOfYtoFlashLoan,
-            uint256 whereToLoanIndex
+            uint256 amountOfYtoFlashLoan
         )
     {
-        whereToLoanIndex = Arbitrage.MAX_INT;
         bool shouldArbitrage;
 
         uint256 totalYGainedFromRouting;
@@ -262,11 +285,8 @@ contract Swap is DexProvider {
             amms.length
         );
         if (shouldArbitrage && amms.length > 1) {
-            (
-                arbitrageAmountsToSendToAmms,
-                amountOfYtoFlashLoan,
-                whereToLoanIndex
-            ) = Arbitrage.arbitrageForY(amms, totalYGainedFromRouting);
+            (arbitrageAmountsToSendToAmms, amountOfYtoFlashLoan) = Arbitrage
+                .arbitrageForY(amms, totalYGainedFromRouting);
         }
     }
 
@@ -279,7 +299,6 @@ contract Swap is DexProvider {
         returns (
             uint256[] memory,
             Structs.AmountsToSendToAmm[] memory,
-            uint256,
             uint256
         )
     {
@@ -300,8 +319,6 @@ contract Swap is DexProvider {
         uint256 amountOut;
         uint256 ySum;
         address[] factoriesSupportingTokenPair;
-        uint256[] routingAmountsToSendToAmms;
-        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
-        uint256 whereToLoanIndex;
+        Structs.AmountsToSendToAmm[] amountsToSendToAmms;
     }
 }

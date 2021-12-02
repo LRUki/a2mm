@@ -149,59 +149,61 @@ contract DexProvider is IUniswapV2Callee {
     function flashSwap(
         address tokenIn,
         address tokenOut,
-        uint256 yToLoan,
-        address whereToLoan,
         uint256 amountIn,
         uint256 ySum,
         uint256 totalYBorrowedBefore,
         address[] memory factoriesSupportingTokenPair,
-        uint256[] memory routingAmountsToSendToAmms,
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms,
+        Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
         Structs.Amm[] memory amms
     ) public {
-        address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
-            tokenIn,
-            tokenOut
-        );
-
         bytes memory data;
+        address whereToLoan = address(0);
+        uint256 yToLoan;
         {
+            uint256 whereToLoanIndex;
+            for (
+                uint256 i = 0;
+                i < factoriesSupportingTokenPair.length;
+                i++
+            ) {
+                if (amountsToSendToAmms[i].x != 0) {
+                    assert(amountsToSendToAmms[i].y == 0);
+                    whereToLoan = factoriesSupportingTokenPair[i];
+                    whereToLoanIndex = i;
+                    break;
+                }
+            }
+            require(
+                whereToLoan != address(0),
+                "no AMMs left; insufficient loan"
+            );
+            yToLoan = SharedFunctions.quantityOfYForX(amms[whereToLoanIndex], amountsToSendToAmms[whereToLoanIndex].x);
+
             address[] memory newFactoriesSupportingTokenPair = new address[](
                 factoriesSupportingTokenPair.length - 1
             );
-            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](
-                routingAmountsToSendToAmms.length - 1
-            );
             Structs.AmountsToSendToAmm[]
-                memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
-                    arbitrageAmountsToSendToAmms.length - 1
-                );
+            memory newAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+                amountsToSendToAmms.length - 1
+            );
 
             {
                 uint256 j = 0;
                 for (
                     uint256 i = 0;
-                    i < routingAmountsToSendToAmms.length;
+                    i < amountsToSendToAmms.length;
                     i++
                 ) {
                     if (factoriesSupportingTokenPair[i] != whereToLoan) {
-                        newFactoriesSupportingTokenPair[
-                            j
-                        ] = factoriesSupportingTokenPair[i];
-                        newRoutingAmountsToSendToAmms[
-                            j
-                        ] = routingAmountsToSendToAmms[i];
-                        newArbitrageAmountsToSendToAmms[
-                            j++
-                        ] = arbitrageAmountsToSendToAmms[i];
+                        newFactoriesSupportingTokenPair[j] = factoriesSupportingTokenPair[i];
+                        newAmountsToSendToAmms[j++] = amountsToSendToAmms[i];
                     }
                 }
             }
 
             data = abi.encode(
                 newFactoriesSupportingTokenPair,
-                newRoutingAmountsToSendToAmms,
-                newArbitrageAmountsToSendToAmms,
+                amountsToSendToAmms,
                 whereToLoan,
                 amountIn,
                 ySum,
@@ -209,6 +211,11 @@ contract DexProvider is IUniswapV2Callee {
                 amms
             );
         }
+
+        address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
+            tokenIn,
+            tokenOut
+        );
 
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
@@ -227,8 +234,7 @@ contract DexProvider is IUniswapV2Callee {
         address tokenIn;
         address tokenOut;
         address whereToRepayLoan;
-        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
-        uint256[] routingAmountsToSendToAmms;
+        Structs.AmountsToSendToAmm[] amountsToSendToAmms;
         address[] factoriesSupportingTokenPair;
         uint256 amountIn;
         uint256 ySum;
@@ -251,8 +257,7 @@ contract DexProvider is IUniswapV2Callee {
         V2CallHelper memory v2CallHelper;
         (
             v2CallHelper.factoriesSupportingTokenPair,
-            v2CallHelper.routingAmountsToSendToAmms,
-            v2CallHelper.arbitrageAmountsToSendToAmms,
+            v2CallHelper.amountsToSendToAmms,
             v2CallHelper.whereToRepayLoan,
             v2CallHelper.amountIn,
             v2CallHelper.ySum,
@@ -262,7 +267,6 @@ contract DexProvider is IUniswapV2Callee {
             data,
             (
                 address[],
-                uint256[],
                 Structs.AmountsToSendToAmm[],
                 address,
                 uint256,
@@ -293,43 +297,14 @@ contract DexProvider is IUniswapV2Callee {
             amount1Out +
             v2CallHelper.totalYBorrowedBefore;
         if (v2CallHelper.ySum > totalYBorrowedNow) {
-            address whereToLoan = address(0);
-            uint256 whereToLoanIndex;
-            for (
-                uint256 i = 0;
-                i < v2CallHelper.factoriesSupportingTokenPair.length;
-                i++
-            ) {
-                if (
-                    v2CallHelper.routingAmountsToSendToAmms[i] +
-                        v2CallHelper.arbitrageAmountsToSendToAmms[i].x !=
-                    0
-                ) {
-                    assert(v2CallHelper.arbitrageAmountsToSendToAmms[i].y == 0);
-                    whereToLoan = v2CallHelper.factoriesSupportingTokenPair[i];
-                    whereToLoanIndex = i;
-                    break;
-                }
-            }
-            require(whereToLoan != address(0), "no AMMs left; insufficient loan");
-            uint256 yFromLoanAmm = SharedFunctions.quantityOfYForX(
-                v2CallHelper.amms[whereToLoanIndex],
-                v2CallHelper.routingAmountsToSendToAmms[whereToLoanIndex] +
-                    v2CallHelper
-                        .arbitrageAmountsToSendToAmms[whereToLoanIndex]
-                        .x
-            );
             flashSwap(
                 v2CallHelper.tokenIn,
                 v2CallHelper.tokenOut,
-                yFromLoanAmm,
-                whereToLoan,
                 v2CallHelper.amountIn,
                 v2CallHelper.ySum,
                 totalYBorrowedNow,
                 v2CallHelper.factoriesSupportingTokenPair,
-                v2CallHelper.routingAmountsToSendToAmms,
-                v2CallHelper.arbitrageAmountsToSendToAmms,
+                v2CallHelper.amountsToSendToAmms,
                 v2CallHelper.amms
             );
             assert(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0);
@@ -339,10 +314,10 @@ contract DexProvider is IUniswapV2Callee {
         uint256 xToRepay = v2CallHelper.amountIn;
         for (
             uint256 i = 0;
-            i < v2CallHelper.arbitrageAmountsToSendToAmms.length;
+            i < v2CallHelper.amountsToSendToAmms.length;
             i++
         ) {
-            if (v2CallHelper.arbitrageAmountsToSendToAmms[i].y != 0) {
+            if (v2CallHelper.amountsToSendToAmms[i].y != 0) {
                 require(
                     v2CallHelper.factoriesSupportingTokenPair[i] !=
                         v2CallHelper.whereToRepayLoan,
@@ -352,18 +327,17 @@ contract DexProvider is IUniswapV2Callee {
                     v2CallHelper.factoriesSupportingTokenPair[i],
                     v2CallHelper.tokenOut,
                     v2CallHelper.tokenIn,
-                    v2CallHelper.arbitrageAmountsToSendToAmms[i].y
+                    v2CallHelper.amountsToSendToAmms[i].y
                 );
             }
         }
 
         for (
             uint256 i = 0;
-            i < v2CallHelper.arbitrageAmountsToSendToAmms.length;
+            i < v2CallHelper.amountsToSendToAmms.length;
             i++
         ) {
-            uint256 xToSend = v2CallHelper.arbitrageAmountsToSendToAmms[i].x +
-                v2CallHelper.routingAmountsToSendToAmms[i];
+            uint256 xToSend = v2CallHelper.amountsToSendToAmms[i].x;
             if (xToSend != 0) {
                 require(
                     v2CallHelper.factoriesSupportingTokenPair[i] !=
