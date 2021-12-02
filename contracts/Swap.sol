@@ -66,6 +66,7 @@ contract Swap is DexProvider {
 
             (
                 swapHelper.amountsToSendToAmms,
+
             ) = calculateRouteAndArbitrageCombined(amms0, amountIn);
         }
 
@@ -156,7 +157,10 @@ contract Swap is DexProvider {
         for (uint256 i = 0; i < amms.length; i++) {
             ySum += amountsToSendToAmms[i].y;
             if (amountsToSendToAmms[i].x != 0) {
-                totalOut += SharedFunctions.quantityOfYForX(amms[i], amountsToSendToAmms[i].x);
+                totalOut += SharedFunctions.quantityOfYForX(
+                    amms[i],
+                    amountsToSendToAmms[i].x
+                );
             }
         }
 
