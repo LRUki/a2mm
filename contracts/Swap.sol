@@ -32,17 +32,6 @@ contract Swap is DexProvider {
         swapWithSlippage(tokenIn, tokenOut, amountIn, uint256(0));
     }
 
-    struct SwapHelper {
-        Structs.Amm[] amms1;
-        uint256 amountOut;
-        uint256 ySum;
-        address[] factoriesSupportingTokenPair;
-        uint256[] routingAmountsToSendToAmms;
-        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
-        uint256 amountOfYtoFlashLoan;
-        uint256 whereToLoanIndex;
-    }
-
     function swapWithSlippage(
         address tokenIn,
         address tokenOut,
@@ -103,18 +92,37 @@ contract Swap is DexProvider {
                 swapHelper.amms1[swapHelper.whereToLoanIndex],
                 swapHelper.routingAmountsToSendToAmms[
                     swapHelper.whereToLoanIndex
-                ] + swapHelper.arbitrageAmountsToSendToAmms[swapHelper.whereToLoanIndex].x
+                ] +
+                    swapHelper
+                        .arbitrageAmountsToSendToAmms[
+                            swapHelper.whereToLoanIndex
+                        ]
+                        .x
             );
 
-            address[] memory newFactoriesSupportingTokenPair = new address[](swapHelper.factoriesSupportingTokenPair.length - 1);
-            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](swapHelper.routingAmountsToSendToAmms.length - 1);
-            Structs.AmountsToSendToAmm[] memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](swapHelper.arbitrageAmountsToSendToAmms.length - 1);
+            address[] memory newFactoriesSupportingTokenPair = new address[](
+                swapHelper.factoriesSupportingTokenPair.length - 1
+            );
+            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](
+                swapHelper.routingAmountsToSendToAmms.length - 1
+            );
+            Structs.AmountsToSendToAmm[]
+                memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+                    swapHelper.arbitrageAmountsToSendToAmms.length - 1
+                );
             uint256 j = 0;
-            for (uint256 i = 0; i < swapHelper.routingAmountsToSendToAmms.length; i++) {
+            for (
+                uint256 i = 0;
+                i < swapHelper.routingAmountsToSendToAmms.length;
+                i++
+            ) {
                 if (i != swapHelper.whereToLoanIndex) {
-                    newFactoriesSupportingTokenPair[j] = swapHelper.factoriesSupportingTokenPair[i];
-                    newRoutingAmountsToSendToAmms[j] = swapHelper.routingAmountsToSendToAmms[i];
-                    newArbitrageAmountsToSendToAmms[j++] = swapHelper.arbitrageAmountsToSendToAmms[i];
+                    newFactoriesSupportingTokenPair[j] = swapHelper
+                        .factoriesSupportingTokenPair[i];
+                    newRoutingAmountsToSendToAmms[j] = swapHelper
+                        .routingAmountsToSendToAmms[i];
+                    newArbitrageAmountsToSendToAmms[j++] = swapHelper
+                        .arbitrageAmountsToSendToAmms[i];
                 }
             }
 
@@ -311,4 +319,15 @@ contract Swap is DexProvider {
     //not sure if we need it but might as well
     //solhint-disable-next-line
     receive() external payable {}
+
+    struct SwapHelper {
+        Structs.Amm[] amms1;
+        uint256 amountOut;
+        uint256 ySum;
+        address[] factoriesSupportingTokenPair;
+        uint256[] routingAmountsToSendToAmms;
+        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
+        uint256 amountOfYtoFlashLoan;
+        uint256 whereToLoanIndex;
+    }
 }
