@@ -100,41 +100,15 @@ contract Swap is DexProvider {
                         .x
             );
 
-            address[] memory newFactoriesSupportingTokenPair = new address[](
-                swapHelper.factoriesSupportingTokenPair.length - 1
-            );
-            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](
-                swapHelper.routingAmountsToSendToAmms.length - 1
-            );
-            Structs.AmountsToSendToAmm[]
-                memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
-                    swapHelper.arbitrageAmountsToSendToAmms.length - 1
-                );
-            uint256 j = 0;
-            for (
-                uint256 i = 0;
-                i < swapHelper.routingAmountsToSendToAmms.length;
-                i++
-            ) {
-                if (i != swapHelper.whereToLoanIndex) {
-                    newFactoriesSupportingTokenPair[j] = swapHelper
-                        .factoriesSupportingTokenPair[i];
-                    newRoutingAmountsToSendToAmms[j] = swapHelper
-                        .routingAmountsToSendToAmms[i];
-                    newArbitrageAmountsToSendToAmms[j++] = swapHelper
-                        .arbitrageAmountsToSendToAmms[i];
-                }
-            }
-
             flashSwap(
                 tokenIn,
                 tokenOut,
                 yFromLoanAmm,
                 whereToLoan,
                 amountIn,
-                newFactoriesSupportingTokenPair,
-                newRoutingAmountsToSendToAmms,
-                newArbitrageAmountsToSendToAmms
+                swapHelper.factoriesSupportingTokenPair,
+                swapHelper.routingAmountsToSendToAmms,
+                swapHelper.arbitrageAmountsToSendToAmms
             );
         } else {
             for (

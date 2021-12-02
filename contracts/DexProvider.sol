@@ -146,7 +146,6 @@ contract DexProvider is IUniswapV2Callee {
         return (factoriesSupportingTokenPair, amms);
     }
 
-    // @notice - 'factoriesSupportingTokenPair' is not allowed to contain 'whereToLoan'
     function flashSwap(
         address tokenIn,
         address tokenOut,
@@ -162,15 +161,44 @@ contract DexProvider is IUniswapV2Callee {
             tokenOut
         );
 
+        bytes memory data;
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
 
-        bytes memory data = abi.encode(
-            factoriesSupportingTokenPair,
-            routingAmountsToSendToAmms,
-            arbitrageAmountsToSendToAmms,
-            whereToLoan,
-            amountIn
-        );
+        {
+            address[] memory newFactoriesSupportingTokenPair = new address[](
+                factoriesSupportingTokenPair.length - 1
+            );
+            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](
+                routingAmountsToSendToAmms.length - 1
+            );
+            Structs.AmountsToSendToAmm[]
+                memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+                    arbitrageAmountsToSendToAmms.length - 1
+                );
+
+            uint256 j = 0;
+            for (uint256 i = 0; i < routingAmountsToSendToAmms.length; i++) {
+                if (factoriesSupportingTokenPair[i] != whereToLoan) {
+                    newFactoriesSupportingTokenPair[
+                        j
+                    ] = factoriesSupportingTokenPair[i];
+                    newRoutingAmountsToSendToAmms[
+                        j
+                    ] = routingAmountsToSendToAmms[i];
+                    newArbitrageAmountsToSendToAmms[
+                        j++
+                    ] = arbitrageAmountsToSendToAmms[i];
+                }
+            }
+
+            data = abi.encode(
+                newFactoriesSupportingTokenPair,
+                newRoutingAmountsToSendToAmms,
+                newArbitrageAmountsToSendToAmms,
+                whereToLoan,
+                amountIn
+            );
+        }
 
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), yToLoan)
