@@ -38,9 +38,9 @@ contract Swap is DexProvider {
         uint256 ySum;
         address[] factoriesSupportingTokenPair;
         uint256[] routingAmountsToSendToAmms;
+        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
         uint256 amountOfYtoFlashLoan;
         uint256 whereToLoanIndex;
-        Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
     }
 
     function swapWithSlippage(
@@ -90,8 +90,6 @@ contract Swap is DexProvider {
             swapHelper.routingAmountsToSendToAmms,
             swapHelper.arbitrageAmountsToSendToAmms
         );
-        //        console.log("swapHelper.ySum = %s", swapHelper.ySum);
-        //        console.log("swapHelper.amountOut = %s", swapHelper.amountOut);
         require(
             swapHelper.amountOut > minimumAcceptedAmount,
             "Slippage tolerance exceeded"
@@ -105,22 +103,30 @@ contract Swap is DexProvider {
                 swapHelper.amms1[swapHelper.whereToLoanIndex],
                 swapHelper.routingAmountsToSendToAmms[
                     swapHelper.whereToLoanIndex
-                ] +
-                    swapHelper
-                        .arbitrageAmountsToSendToAmms[
-                            swapHelper.whereToLoanIndex
-                        ]
-                        .x
+                ] + swapHelper.arbitrageAmountsToSendToAmms[swapHelper.whereToLoanIndex].x
             );
+
+            address[] memory newFactoriesSupportingTokenPair = new address[](swapHelper.factoriesSupportingTokenPair.length - 1);
+            uint256[] memory newRoutingAmountsToSendToAmms = new uint256[](swapHelper.routingAmountsToSendToAmms.length - 1);
+            Structs.AmountsToSendToAmm[] memory newArbitrageAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](swapHelper.arbitrageAmountsToSendToAmms.length - 1);
+            uint256 j = 0;
+            for (uint256 i = 0; i < swapHelper.routingAmountsToSendToAmms.length; i++) {
+                if (i != swapHelper.whereToLoanIndex) {
+                    newFactoriesSupportingTokenPair[j] = swapHelper.factoriesSupportingTokenPair[i];
+                    newRoutingAmountsToSendToAmms[j] = swapHelper.routingAmountsToSendToAmms[i];
+                    newArbitrageAmountsToSendToAmms[j++] = swapHelper.arbitrageAmountsToSendToAmms[i];
+                }
+            }
+
             flashSwap(
                 tokenIn,
                 tokenOut,
                 yFromLoanAmm,
                 whereToLoan,
                 amountIn,
-                swapHelper.factoriesSupportingTokenPair,
-                swapHelper.routingAmountsToSendToAmms,
-                swapHelper.arbitrageAmountsToSendToAmms
+                newFactoriesSupportingTokenPair,
+                newRoutingAmountsToSendToAmms,
+                newArbitrageAmountsToSendToAmms
             );
         } else {
             for (
