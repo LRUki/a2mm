@@ -91,7 +91,7 @@ describe("==================================== Swap Helpers ====================
 
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.4");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("2"),
@@ -117,7 +117,7 @@ describe("==================================== Swap Helpers ====================
       toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
       toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
     ];
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -127,7 +127,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Swapping lots of X means no flash loan required:", async function () {
     let amountOfXToSend = ethers.utils.parseEther("100");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),
@@ -151,7 +151,7 @@ describe("==================================== Swap Helpers ====================
     let amountOfXToSend = ethers.utils.parseEther("0.4");
     var throwsError = false;
     try {
-      await this.swap.calculateRouteAndArbitargeWrapper(
+      await this.swap.calculateRouteAndArbitrageWrapper(
         [],
         `${amountOfXToSend}`
       );
@@ -173,7 +173,7 @@ describe("==================================== Swap Helpers ====================
       ]),
     ];
 
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -199,7 +199,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Flash loan is required when we hold insufficient Y after routing", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.00002");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),

@@ -311,7 +311,7 @@ contract DexProvider is IUniswapV2Callee {
                     break;
                 }
             }
-            require(whereToLoan != address(0), "");
+            require(whereToLoan != address(0), "no AMMs left; insufficient loan");
             uint256 yFromLoanAmm = SharedFunctions.quantityOfYForX(
                 v2CallHelper.amms[whereToLoanIndex],
                 v2CallHelper.routingAmountsToSendToAmms[whereToLoanIndex] +

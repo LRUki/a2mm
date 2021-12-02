@@ -43,7 +43,6 @@ contract Swap is DexProvider {
             "user needs to approve"
         );
 
-        //TODO: since calculateRouteAndArbitarge is public, does it still take things by reference? If not, then the below lines of copying the amms can be deleted.
         // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
         SwapHelper memory swapHelper;
         {
@@ -70,7 +69,7 @@ contract Swap is DexProvider {
                 swapHelper.arbitrageAmountsToSendToAmms,
                 ,
                 swapHelper.whereToLoanIndex
-            ) = calculateRouteAndArbitarge(amms0, amountIn);
+            ) = calculateRouteAndArbitrage(amms0, amountIn);
         }
 
         //TODO: handle integer division error (there is leftover X in the user's account)
@@ -182,7 +181,6 @@ contract Swap is DexProvider {
             tokenOut
         );
 
-        //TODO: since calculateRouteAndArbitarge is public, does it still take things by reference? If not, then the below lines of copying the amms can be deleted.
         // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
         Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
         for (uint256 i = 0; i < amms0.length; i++) {
@@ -194,7 +192,7 @@ contract Swap is DexProvider {
             Structs.AmountsToSendToAmm[] memory arbitrages,
             ,
 
-        ) = calculateRouteAndArbitarge(amms0, amountIn);
+        ) = calculateRouteAndArbitrage(amms0, amountIn);
 
         (totalGain, ) = _calculateTotalYOut(amms1, routes, arbitrages);
     }
@@ -235,7 +233,7 @@ contract Swap is DexProvider {
     // (ordered in the same way as the AMMs were passed in)
     // @return flashLoanRequiredAmount - how big of a flash loan we would need to take out to successfully \
     // complete the transation. This is done for the arbitrage step.
-    function calculateRouteAndArbitarge(
+    function calculateRouteAndArbitrage(
         Structs.Amm[] memory amms,
         uint256 amountOfX
     )
@@ -272,7 +270,7 @@ contract Swap is DexProvider {
         }
     }
 
-    function calculateRouteAndArbitargeWrapper(
+    function calculateRouteAndArbitrageWrapper(
         uint256[2][] memory ammsArray,
         uint256 amountOfX
     )
@@ -289,7 +287,7 @@ contract Swap is DexProvider {
         for (uint256 i = 0; i < ammsArray.length; ++i) {
             amms[i] = Structs.Amm(ammsArray[i][0], ammsArray[i][1]);
         }
-        return calculateRouteAndArbitarge(amms, amountOfX);
+        return calculateRouteAndArbitrage(amms, amountOfX);
     }
 
     //allow contract to recieve eth
