@@ -68,7 +68,7 @@ contract Swap is DexProvider {
             (
                 swapHelper.routingAmountsToSendToAmms,
                 swapHelper.arbitrageAmountsToSendToAmms,
-                swapHelper.amountOfYtoFlashLoan,
+                ,
                 swapHelper.whereToLoanIndex
             ) = calculateRouteAndArbitarge(amms0, amountIn);
         }
@@ -327,7 +327,6 @@ contract Swap is DexProvider {
         address[] factoriesSupportingTokenPair;
         uint256[] routingAmountsToSendToAmms;
         Structs.AmountsToSendToAmm[] arbitrageAmountsToSendToAmms;
-        uint256 amountOfYtoFlashLoan;
         uint256 whereToLoanIndex;
     }
 }
