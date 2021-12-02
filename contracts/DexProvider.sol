@@ -344,11 +344,5 @@ contract DexProvider is IUniswapV2Callee {
                 v2CallHelper.xToYSwaps[i]
             );
         }
-
-        console.log(
-            "leftover X = %s",
-            IERC20(v2CallHelper.tokenIn).balanceOf(address(this))
-        );
-        //        require(IERC20(v2CallHelper.tokenIn).balanceOf(address(this)) == 0, "All of X should be spent");
     }
 }
