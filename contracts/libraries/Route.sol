@@ -77,6 +77,7 @@ library Route {
                 routeHelper.aggregatedPool,
                 nextBestAmm
             );
+
             // If it turns out that the AMM we are trying to level with has the same price, then no need to level it
             if (routeHelper.deltaX == 0) {
                 routeHelper.aggregatedPool.x += nextBestAmm.x;
@@ -109,7 +110,7 @@ library Route {
             //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
             routeHelper.leveledAmms = new Structs.Amm[](amms.length - j);
             for (uint256 k = 0; k < routeHelper.leveledAmms.length; ++k) {
-                routeHelper.leveledAmms[k] = amms[
+                routeHelper.leveledAmms[routeHelper.leveledAmms.length - 1 - k] = amms[
                     routeHelper.sortedIndices[amms.length - 1 - k]
                 ];
             }

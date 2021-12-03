@@ -227,18 +227,8 @@ library SharedFunctions {
 
         //We prefer working with smaller numbers - less likely to run into overflow issues or losing
         // precision on division
-        uint256 smallerDenom;
-        bool areXsSmaller;
-        if (sumX < sumY) {
-            smallerDenom = sumX;
-            areXsSmaller = true;
-        } else {
-            smallerDenom = sumY;
-            areXsSmaller = false;
-        }
-
         // We just take the weighted average to know how to split our spending:
-        if (areXsSmaller) {
+        if (sumX < sumY) {
             for (uint256 i = 0; i < numberOfAmms; ++i) {
                 splits[i] = (amms[i].x * delta) / sumX;
             }

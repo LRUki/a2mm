@@ -318,7 +318,6 @@ contract Swap is DexProvider {
         )
     {
         bool shouldArbitrage;
-
         uint256 totalYGainedFromRouting;
         (
             routingAmountsToSendToAmms,
