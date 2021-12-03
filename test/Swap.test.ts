@@ -343,9 +343,6 @@ describe("==================================== Swap ============================
       let isBetter = true;
       factoryStats.forEach((factoryStat) => {
         const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
-        console.log(
-          `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
-        );
         if (userRecievedAmount.toString() < amountOut.toString()) {
           isBetter = false;
         }
@@ -354,23 +351,12 @@ describe("==================================== Swap ============================
       if (!isBetter) {
         worseCases++;
       }
-
-      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-      console.log(
-        `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
-      );
-      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
       //TODO compare the userRecievedAmount against FactoryStat
     });
   });
 
   it("Percentage should be smaller than 30%", async function () {
     let percentage = worseCases / swapTestCases.length * 100;
-    console.log(percentage)
     expect(percentage).to.lessThan(30);
   });
 });
-
-// function sleep(time: number) {
-//   return new Promise((resolve) => setTimeout(resolve, time));
-// }

@@ -160,7 +160,6 @@ contract DexProvider is IUniswapV2Callee {
         address tokenOut,
         uint256 amountIn,
         uint256 noOfXToYSwapsLeft,
-        uint256 totalYBorrowedBefore,
         address[] memory factoriesSupportingTokenPair,
         Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
         Structs.Amm[] memory amms,
@@ -225,7 +224,6 @@ contract DexProvider is IUniswapV2Callee {
                 newAmms,
                 amountIn,
                 noOfXToYSwapsLeft,
-                totalYBorrowedBefore,
                 xToYSwaps,
                 xToYSwapsFactories
             );
@@ -254,7 +252,6 @@ contract DexProvider is IUniswapV2Callee {
         address[] factoriesSupportingTokenPair;
         uint256 amountIn;
         uint256 noOfXToYSwapsLeft;
-        uint256 totalYBorrowedBefore;
         Structs.Amm[] amms;
         uint256[] xToYSwaps;
         address[] xToYSwapsFactories;
@@ -279,7 +276,6 @@ contract DexProvider is IUniswapV2Callee {
             v2CallHelper.amms,
             v2CallHelper.amountIn,
             v2CallHelper.noOfXToYSwapsLeft,
-            v2CallHelper.totalYBorrowedBefore,
             v2CallHelper.xToYSwaps,
             v2CallHelper.xToYSwapsFactories
         ) = abi.decode(
@@ -288,7 +284,6 @@ contract DexProvider is IUniswapV2Callee {
                 address[],
                 Structs.AmountsToSendToAmm[],
                 Structs.Amm[],
-                uint256,
                 uint256,
                 uint256,
                 uint256[],
@@ -303,9 +298,6 @@ contract DexProvider is IUniswapV2Callee {
             ? (token0, token1)
             : (token1, token0);
 
-        uint256 totalYBorrowedNow = amount0Out +
-            amount1Out +
-            v2CallHelper.totalYBorrowedBefore;
         if (v2CallHelper.noOfXToYSwapsLeft > 0) {
             // We (possibly) have insufficient Y, so need to also take a loan out somewhere else.
             flashSwap(
@@ -313,7 +305,6 @@ contract DexProvider is IUniswapV2Callee {
                 v2CallHelper.tokenOut,
                 v2CallHelper.amountIn,
                 v2CallHelper.noOfXToYSwapsLeft,
-                totalYBorrowedNow,
                 v2CallHelper.factoriesSupportingTokenPair,
                 v2CallHelper.amountsToSendToAmms,
                 v2CallHelper.amms,

@@ -91,6 +91,8 @@ contract Swap is DexProvider {
             uint256 j = 0;
             for (uint256 i = 0; i < swapHelper.amms1.length; i++) {
                 if (swapHelper.amountsToSendToAmms[i].x != 0) {
+                    console.log("swapHelper.amountsToSendToAmms[i].x = %s", swapHelper.amountsToSendToAmms[i].x);
+                    console.log("swapHelper.amountsToSendToAmms[i].y = %s", swapHelper.amountsToSendToAmms[i].y);
                     require(
                         swapHelper.amountsToSendToAmms[i].y == 0,
                         "Can't swap both X and Y"
@@ -107,7 +109,6 @@ contract Swap is DexProvider {
                 tokenOut,
                 amountIn,
                 swapHelper.noOfXToYSwaps,
-                0,
                 swapHelper.factoriesSupportingTokenPair,
                 swapHelper.amountsToSendToAmms,
                 swapHelper.amms1,
