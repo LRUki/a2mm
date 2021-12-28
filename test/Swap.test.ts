@@ -91,7 +91,7 @@ describe("==================================== Swap Helpers ====================
 
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.4");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("2"),
@@ -117,7 +117,7 @@ describe("==================================== Swap Helpers ====================
       toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
       toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
     ];
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -127,7 +127,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Swapping lots of X means no flash loan required:", async function () {
     let amountOfXToSend = ethers.utils.parseEther("100");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),
@@ -151,7 +151,7 @@ describe("==================================== Swap Helpers ====================
     let amountOfXToSend = ethers.utils.parseEther("0.4");
     var throwsError = false;
     try {
-      await this.swap.calculateRouteAndArbitargeWrapper(
+      await this.swap.calculateRouteAndArbitrageWrapper(
         [],
         `${amountOfXToSend}`
       );
@@ -173,7 +173,7 @@ describe("==================================== Swap Helpers ====================
       ]),
     ];
 
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -199,7 +199,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Flash loan is required when we hold insufficient Y after routing", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.00002");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),
@@ -235,15 +235,21 @@ describe("==================================== Swap ============================
   };
 
   const swapTestCases: SwapTestCaseParam[] = [];
+  swapTestCases.push([
+    Number(13680600),
+    [Token.WETH, Token.SHIBA],
+    ethers.utils.parseEther("5"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
+  swapTestCases.push([
+    Number(13680700),
+    [Token.WETH, Token.SHIBA],
+    ethers.utils.parseEther("5"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
   for (let i = 0; i < 10; i++) {
-    swapTestCases.push([
-      Number(13679900 + 100 * i),
-      [Token.WETH, Token.UNI],
-      ethers.utils.parseEther("0.1"),
-      ethers.utils.parseEther("0.1"),
-    ] as SwapTestCaseParam);
-  }
-  for (let i = 0; i < 5; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
       [Token.WETH, Token.UNI],
@@ -251,6 +257,14 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+
+  swapTestCases.push([
+    Number(13688900),
+    [Token.WETH, Token.UNI],
+    ethers.utils.parseEther("0.1"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
   for (let i = 0; i < 3; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
@@ -259,11 +273,21 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+
   for (let i = 0; i < 3; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
       [Token.WETH, Token.SHIBA],
       ethers.utils.parseEther("0.0000005"),
+      ethers.utils.parseEther("0.1"),
+    ] as SwapTestCaseParam);
+  }
+
+  for (let i = 0; i < 10; i++) {
+    swapTestCases.push([
+      Number(13679900 + 100 * i),
+      [Token.WETH, Token.UNI],
+      ethers.utils.parseEther("0.1"),
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
@@ -337,9 +361,6 @@ describe("==================================== Swap ============================
       let isBetter = true;
       factoryStats.forEach((factoryStat) => {
         const { factory, reserveIn, reserveOut, amountOut } = factoryStat;
-        console.log(
-          `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
-        );
         if (userRecievedAmount.toString() < amountOut.toString()) {
           isBetter = false;
         }
@@ -348,23 +369,12 @@ describe("==================================== Swap ============================
       if (!isBetter) {
         worseCases++;
       }
-
-      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-      console.log(
-        `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
-      );
-      console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
       //TODO compare the userRecievedAmount against FactoryStat
     });
   });
 
   it("Percentage should be smaller than 30%", async function () {
     let percentage = worseCases / swapTestCases.length * 100;
-    console.log(percentage)
     expect(percentage).to.lessThan(30);
   });
 });
-
-// function sleep(time: number) {
-//   return new Promise((resolve) => setTimeout(resolve, time));
-// }
