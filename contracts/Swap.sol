@@ -24,11 +24,19 @@ contract Swap is DexProvider {
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
+    constructor(address[3] memory factoryAddresses)
+        public
+        DexProvider(factoryAddresses)
+    //solhint-disable-next-line
+    {
+
+    }
+
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public {
+    ) external {
         swapWithSlippage(tokenIn, tokenOut, amountIn, uint256(0));
     }
 
@@ -354,11 +362,6 @@ contract Swap is DexProvider {
         }
         return calculateRouteAndArbitrage(amms, amountOfX);
     }
-
-    //allow contract to recieve eth
-    //not sure if we need it but might as well
-    //solhint-disable-next-line
-    receive() external payable {}
 
     struct SwapHelper {
         Structs.Amm[] amms1;

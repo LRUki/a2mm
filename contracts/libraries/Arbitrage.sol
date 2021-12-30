@@ -8,7 +8,7 @@ import "./SharedFunctions.sol";
 import "hardhat/console.sol";
 
 library Arbitrage {
-    uint256 public constant MAX_INT =
+    uint256 private constant _MAX_INT =
         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     //function below is only for testing purposes
@@ -113,7 +113,7 @@ library Arbitrage {
             } else if (subtrahend >= minuend) {
                 //If this is the case, then it means that we need to spend infinity of Y on arbHelper.ml to actually
                 // buy that much of X; hence, we set arbHelper.dy as high as we possibly can.
-                arbHelper.dy = MAX_INT;
+                arbHelper.dy = _MAX_INT;
             } else {
                 arbHelper.dy =
                     (1000 * arbHelper.ml.y * arbHelper.dxBar) /

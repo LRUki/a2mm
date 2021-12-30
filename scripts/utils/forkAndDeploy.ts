@@ -2,7 +2,7 @@ import { network, ethers } from "hardhat";
 import deployContract from "./deploy";
 import { Libraries } from "hardhat/types";
 import { Contract } from "@ethersproject/contracts";
-
+import { factoryToAddress } from "./Factory";
 //forks at given blocknumber, deploy the swap contract
 //and returns the contract instance
 export default async (blockNumber: number): Promise<Contract> => {
@@ -35,6 +35,10 @@ export default async (blockNumber: number): Promise<Contract> => {
     ["Route"]: RoutelibraryAddress,
     ["SharedFunctions"]: SharedFunctionslibraryAddress,
   };
-  const address = await deployContract("Swap", libraries);
+  const address = await deployContract(
+    "Swap",
+    libraries,
+    Object.values(factoryToAddress)
+  );
   return await ethers.getContractAt("Swap", address);
 };

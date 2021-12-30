@@ -24,18 +24,11 @@ import "hardhat/console.sol";
 contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
 
-    address internal constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address internal constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address internal constant _SHIBA_FACTORY_ADDRESS =
-        0x115934131916C8b277DD010Ee02de363c09d037c;
+    address[3] private _factoryAddresses;
 
-    address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS,
-        _SHIBA_FACTORY_ADDRESS
-    ];
+    constructor(address[3] memory factoryAddresses) public {
+        _factoryAddresses = factoryAddresses;
+    }
 
     function getReserves(
         address factoryAddress,

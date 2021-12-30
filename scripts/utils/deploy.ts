@@ -6,13 +6,14 @@ import { Libraries } from "hardhat/types";
 
 export default async (
   contractName: string,
-  libraries: Libraries = {}
+  libraries: Libraries = {},
+  args: Array<any> = []
 ): Promise<BaseContract["address"]> => {
   const Contract = await ethers.getContractFactory(contractName, {
     libraries,
   });
   // console.log(`Deploying ${contractName}`);
-  const contract = await Contract.deploy();
+  const contract = await Contract.deploy(args);
 
   await contract.deployed();
   // console.log(`${contractName} deployed to`, contract.address);
