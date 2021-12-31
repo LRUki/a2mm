@@ -167,9 +167,6 @@ contract Swap is DexProvider {
             uint256 noOfXToYSwaps
         )
     {
-        totalOut = 0;
-        ySum = 0;
-        noOfXToYSwaps = 0;
         for (uint256 i = 0; i < amms.length; i++) {
             ySum += arbitrages[i].y;
             if (routes[i] + arbitrages[i].x != 0) {
@@ -201,9 +198,6 @@ contract Swap is DexProvider {
             uint256 noOfXToYSwaps
         )
     {
-        totalOut = 0;
-        ySum = 0;
-        noOfXToYSwaps = 0;
         for (uint256 i = 0; i < amms.length; i++) {
             ySum += amountsToSendToAmms[i].y;
             if (amountsToSendToAmms[i].x != 0) {
