@@ -252,7 +252,6 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
-  console.log(swapTestCases.length, "LENGTH");
   let worseCases = 0;
   let totalGas: BigNumber = BigNumber.from(0);
   let totalUserRecievedAmount: BigNumber = BigNumber.from(0);
@@ -312,7 +311,7 @@ describe("==================================== Swap ============================
       );
       const txStatus = await tx.wait();
       totalGas = totalGas.add(txStatus.gasUsed);
-      // console.log(totalGas.toString(), "TOTAL GAS");
+      console.log(totalGas.toString(), "TOTAL GAS");
       const userRecievedAmount: BigNumber = await getBalanceOfERC20(
         signer.address,
         tokenToAddress[tokenOut]
