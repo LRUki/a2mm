@@ -44,23 +44,8 @@ describe("==================================== Swap Helpers ====================
   });
 
   beforeEach(async function () {
-    this.swap = await this.Swap.deploy();
+    this.swap = await this.Swap.deploy(Object.values(factoryToAddress));
     await this.swap.deployed();
-  });
-
-  it("contract recieves funds", async function () {
-    const [signer] = await ethers.getSigners();
-    const ethAmount = "1";
-    const signerAddress = await signer.getAddress();
-    await signer.sendTransaction({
-      from: signerAddress,
-      to: this.swap.address,
-      value: ethers.utils.parseEther(ethAmount),
-    });
-    const contractBalance = await signer.provider?.getBalance(
-      this.swap.address
-    );
-    expect(contractBalance).to.equal(ethers.utils.parseEther(ethAmount));
   });
 
   it("swaps on differnt route", async function () {
@@ -91,7 +76,7 @@ describe("==================================== Swap Helpers ====================
 
   it("When only one AMM is supplied, everything is sent to that AMM", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.4");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("2"),
@@ -117,7 +102,7 @@ describe("==================================== Swap Helpers ====================
       toStringMap([ethers.utils.parseEther("4"), ethers.utils.parseEther("6")]),
       toStringMap([ethers.utils.parseEther("2"), ethers.utils.parseEther("3")]),
     ];
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -127,7 +112,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Swapping lots of X means no flash loan required:", async function () {
     let amountOfXToSend = ethers.utils.parseEther("100");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),
@@ -173,7 +158,7 @@ describe("==================================== Swap Helpers ====================
       ]),
     ];
 
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       ammsArr,
       `${amountOfXToSend}`
     );
@@ -199,7 +184,7 @@ describe("==================================== Swap Helpers ====================
 
   it("Flash loan is required when we hold insufficient Y after routing", async function () {
     let amountOfXToSend = ethers.utils.parseEther("0.00002");
-    const amm = await this.swap.calculateRouteAndArbitargeWrapper(
+    const amm = await this.swap.calculateRouteAndArbitrageWrapper(
       [
         toStringMap([
           ethers.utils.parseEther("3"),
@@ -267,9 +252,9 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
-
   let worseCases = 0;
-
+  let totalGas: BigNumber = BigNumber.from(0);
+  let totalUserRecievedAmount: BigNumber = BigNumber.from(0);
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
       swapTestCase;
@@ -325,10 +310,8 @@ describe("==================================== Swap ============================
         amountIn
       );
       const txStatus = await tx.wait();
-      //check event emitted?
-      // const swapEvent = txStatus.events.filter(
-      //   (e: { event: string; args: string[] }) => e.event == "SwapEvent"
-      // );
+      totalGas = totalGas.add(txStatus.gasUsed);
+      console.log(totalGas.toString(), "TOTAL GAS");
       const userRecievedAmount: BigNumber = await getBalanceOfERC20(
         signer.address,
         tokenToAddress[tokenOut]
@@ -353,18 +336,18 @@ describe("==================================== Swap ============================
       console.log(
         `At A2MM, we would get ${userRecievedAmount.toString()} of ${tokenOut}`
       );
+      totalUserRecievedAmount = totalUserRecievedAmount.add(userRecievedAmount);
+      // console.log(
+      //   totalUserRecievedAmount.toString(),
+      //   "total amount recieved so far"
+      // );
       console.log("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-      //TODO compare the userRecievedAmount against FactoryStat
     });
   });
 
   it("Percentage should be smaller than 30%", async function () {
-    let percentage = worseCases / swapTestCases.length * 100;
-    console.log(percentage)
+    let percentage = (worseCases / swapTestCases.length) * 100;
+    console.log(percentage);
     expect(percentage).to.lessThan(30);
   });
 });
-
-// function sleep(time: number) {
-//   return new Promise((resolve) => setTimeout(resolve, time));
-// }

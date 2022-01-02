@@ -24,18 +24,11 @@ import "hardhat/console.sol";
 contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
 
-    address internal constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address internal constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address internal constant _SHIBA_FACTORY_ADDRESS =
-        0x115934131916C8b277DD010Ee02de363c09d037c;
+    address[3] private _factoryAddresses;
 
-    address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS,
-        _SHIBA_FACTORY_ADDRESS
-    ];
+    constructor(address[3] memory factoryAddresses) public {
+        _factoryAddresses = factoryAddresses;
+    }
 
     function getReserves(
         address factoryAddress,
@@ -103,84 +96,155 @@ contract DexProvider is IUniswapV2Callee {
         view
         returns (
             address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
+            Structs.Amm[] memory amms0,
+            Structs.Amm[] memory amms1
         )
     {
-        uint256 noFactoriesSupportingTokenPair = 0;
+        uint256 noFactoriesSupportingTokenPair;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
                 noFactoriesSupportingTokenPair++;
             }
         }
 
-        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms0 = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms1 = new Structs.Amm[](noFactoriesSupportingTokenPair);
         factoriesSupportingTokenPair = new address[](
             noFactoriesSupportingTokenPair
         );
         uint256 j = 0;
-        for (
-            uint256 i = 0;
-            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
-            i++
-        ) {
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
-                (amms[j].x, amms[j].y) = getReserves(
+                (amms0[j].x, amms0[j].y) = getReserves(
                     _factoryAddresses[i],
                     tokenIn,
                     tokenOut
                 );
+                (amms1[j].x, amms1[j].y) = (amms0[j].x, amms0[j].y);
                 factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
             }
         }
+    }
 
-        return (factoriesSupportingTokenPair, amms);
+    struct FlashSwapHelper {
+        bytes data;
+        address whereToLoan;
+        uint256 yToLoan;
+        uint256 whereToLoanIndex;
+        address[] newFactoriesSupportingTokenPair;
+        Structs.AmountsToSendToAmm[] newAmountsToSendToAmms;
     }
 
     function flashSwap(
         address tokenIn,
         address tokenOut,
-        uint256 yToLoan,
-        address whereToLoan,
         uint256 amountIn,
+        uint256 noOfXToYSwapsLeft,
         address[] memory factoriesSupportingTokenPair,
-        uint256[] memory routingAmountsToSendToAmms,
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms
+        Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
+        Structs.Amm[] memory amms,
+        uint256[] memory xToYSwaps,
+        address[] memory xToYSwapsFactories
     ) public {
-        address pairAddress = IUniswapV2Factory(whereToLoan).getPair(
-            tokenIn,
-            tokenOut
-        );
+        FlashSwapHelper memory flashSwapHelper;
+        flashSwapHelper.whereToLoan = address(0);
+        {
+            // find an AMM to take a loan out from - this can be any one which we have an X->Y transaction on.
+            for (uint256 i = 0; i < factoriesSupportingTokenPair.length; i++) {
+                if (amountsToSendToAmms[i].x != 0) {
+                    require(amountsToSendToAmms[i].y == 0,"Y should be zero");
+                    flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[
+                        i
+                    ];
+                    flashSwapHelper.whereToLoanIndex = i;
+                    break;
+                }
+            }
+            require(
+                flashSwapHelper.whereToLoan != address(0),
+                "no AMMs left; insufficient loan"
+            );
+            // determine how big the loan needs to be
+            flashSwapHelper.yToLoan = SharedFunctions.quantityOfYForX(
+                amms[flashSwapHelper.whereToLoanIndex],
+                amountsToSendToAmms[flashSwapHelper.whereToLoanIndex].x
+            );
+
+            // filter out the AMM which we will be borrowing from next
+            flashSwapHelper.newFactoriesSupportingTokenPair = new address[](
+                factoriesSupportingTokenPair.length - 1
+            );
+            flashSwapHelper
+                .newAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
+                amountsToSendToAmms.length - 1
+            );
+            Structs.Amm[] memory newAmms = new Structs.Amm[](amms.length - 1);
+            {
+                uint256 j;
+                for (uint256 i = 0; i < amountsToSendToAmms.length; i++) {
+                    if (
+                        factoriesSupportingTokenPair[i] !=
+                        flashSwapHelper.whereToLoan
+                    ) {
+                        flashSwapHelper.newFactoriesSupportingTokenPair[
+                                j
+                            ] = factoriesSupportingTokenPair[i];
+                        newAmms[j] = amms[i];
+                        flashSwapHelper.newAmountsToSendToAmms[
+                                j++
+                            ] = amountsToSendToAmms[i];
+                    }
+                }
+            }
+
+            noOfXToYSwapsLeft--;
+            flashSwapHelper.data = abi.encode(
+                flashSwapHelper.newFactoriesSupportingTokenPair,
+                flashSwapHelper.newAmountsToSendToAmms,
+                newAmms,
+                amountIn,
+                noOfXToYSwapsLeft,
+                xToYSwaps,
+                xToYSwapsFactories
+            );
+        }
+
+        address pairAddress = IUniswapV2Factory(flashSwapHelper.whereToLoan)
+            .getPair(tokenIn, tokenOut);
 
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
-
-        bytes memory data = abi.encode(
-            factoriesSupportingTokenPair,
-            routingAmountsToSendToAmms,
-            arbitrageAmountsToSendToAmms,
-            whereToLoan,
-            amountIn
-        );
-
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), yToLoan)
-            : (yToLoan, uint256(0));
+            ? (uint256(0), flashSwapHelper.yToLoan)
+            : (flashSwapHelper.yToLoan, uint256(0));
 
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
-            data
+            flashSwapHelper.data
         );
+    }
+
+    struct V2CallHelper {
+        address tokenIn;
+        address tokenOut;
+        Structs.AmountsToSendToAmm[] amountsToSendToAmms;
+        address[] factoriesSupportingTokenPair;
+        uint256 amountIn;
+        uint256 noOfXToYSwapsLeft;
+        Structs.Amm[] amms;
+        uint256[] xToYSwaps;
+        address[] xToYSwapsFactories;
     }
 
     function uniswapV2Call(
@@ -195,78 +259,71 @@ contract DexProvider is IUniswapV2Callee {
             "flash loan invalid"
         );
 
-        address tokenIn;
-        address tokenOut;
-        address whereToRepayLoan;
-        Structs.AmountsToSendToAmm[] memory arbitrageAmountsToSendToAmms;
-        uint256[] memory routingAmountsToSendToAmms;
-        address[] memory factoriesSupportingTokenPair;
-        uint256 xGross;
-        uint256 yGross = 0;
-        {
+        V2CallHelper memory v2CallHelper;
+        (
+            v2CallHelper.factoriesSupportingTokenPair,
+            v2CallHelper.amountsToSendToAmms,
+            v2CallHelper.amms,
+            v2CallHelper.amountIn,
+            v2CallHelper.noOfXToYSwapsLeft,
+            v2CallHelper.xToYSwaps,
+            v2CallHelper.xToYSwapsFactories
+        ) = abi.decode(
+            data,
             (
-                factoriesSupportingTokenPair,
-                routingAmountsToSendToAmms,
-                arbitrageAmountsToSendToAmms,
-                whereToRepayLoan,
-                xGross
-            ) = abi.decode(
-                data,
-                (
-                    address[],
-                    uint256[],
-                    Structs.AmountsToSendToAmm[],
-                    address,
-                    uint256
-                )
+                address[],
+                Structs.AmountsToSendToAmm[],
+                Structs.Amm[],
+                uint256,
+                uint256,
+                uint256[],
+                address[]
+            )
+        );
+
+        address token0 = IUniswapV2Pair(msg.sender).token0();
+        address token1 = IUniswapV2Pair(msg.sender).token1();
+
+        (v2CallHelper.tokenIn, v2CallHelper.tokenOut) = amount0Out == 0
+            ? (token0, token1)
+            : (token1, token0);
+
+        if (v2CallHelper.noOfXToYSwapsLeft > 0) {
+            // We (possibly) have insufficient Y, so need to also take a loan out somewhere else.
+            flashSwap(
+                v2CallHelper.tokenIn,
+                v2CallHelper.tokenOut,
+                v2CallHelper.amountIn,
+                v2CallHelper.noOfXToYSwapsLeft,
+                v2CallHelper.factoriesSupportingTokenPair,
+                v2CallHelper.amountsToSendToAmms,
+                v2CallHelper.amms,
+                v2CallHelper.xToYSwaps,
+                v2CallHelper.xToYSwapsFactories
             );
+            return;
+        }
 
-            {
-                address token0 = IUniswapV2Pair(msg.sender).token0();
-                address token1 = IUniswapV2Pair(msg.sender).token1();
-
-                assert(
-                    msg.sender ==
-                        IUniswapV2Factory(whereToRepayLoan).getPair(
-                            token0,
-                            token1
-                        )
+        for (uint256 i = 0; i < v2CallHelper.amountsToSendToAmms.length; i++) {
+            if (v2CallHelper.amountsToSendToAmms[i].y != 0) {
+                executeSwap(
+                    v2CallHelper.factoriesSupportingTokenPair[i],
+                    v2CallHelper.tokenOut,
+                    v2CallHelper.tokenIn,
+                    v2CallHelper.amountsToSendToAmms[i].y
                 );
-
-                (tokenIn, tokenOut) = amount0Out == 0
-                    ? (token0, token1)
-                    : (token1, token0);
-            }
-            for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                if (arbitrageAmountsToSendToAmms[i].y != 0) {
-                    xGross += executeSwap(
-                        factoriesSupportingTokenPair[i],
-                        tokenOut,
-                        tokenIn,
-                        arbitrageAmountsToSendToAmms[i].y
-                    );
-                }
-            }
-
-            for (uint256 i = 0; i < arbitrageAmountsToSendToAmms.length; i++) {
-                uint256 xToSend = arbitrageAmountsToSendToAmms[i].x +
-                    routingAmountsToSendToAmms[i];
-                if (
-                    xToSend != 0 &&
-                    factoriesSupportingTokenPair[i] != whereToRepayLoan
-                ) {
-                    xGross -= xToSend;
-                    yGross += executeSwap(
-                        factoriesSupportingTokenPair[i],
-                        tokenIn,
-                        tokenOut,
-                        xToSend
-                    );
-                }
             }
         }
-        TransferHelper.safeTransfer(tokenIn, msg.sender, xGross);
 
-        assert(IERC20(tokenIn).balanceOf(address(this)) == 0);
+        for (uint256 i = 0; i < v2CallHelper.xToYSwaps.length; i++) {
+            TransferHelper.safeTransfer(
+                v2CallHelper.tokenIn,
+                IUniswapV2Factory(v2CallHelper.xToYSwapsFactories[i]).getPair(
+                    token0,
+                    token1
+                ),
+                v2CallHelper.xToYSwaps[i]
+            );
+        }
     }
 }
