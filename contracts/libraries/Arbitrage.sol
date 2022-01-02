@@ -273,7 +273,7 @@ library Arbitrage {
         uint256 t12,
         uint256 t22
     ) private pure returns (uint256) {
-        assert(t21 * t12 >= t22 * t11);
+        require(t21 * t12 >= t22 * t11, "optimalAmountOnArbitarge");
         uint256 left = (997 *
             SharedFunctions.sqrt(t11 * t12) *
             SharedFunctions.sqrt(t21 * t22)) / 1000;

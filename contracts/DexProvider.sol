@@ -106,7 +106,7 @@ contract DexProvider is IUniswapV2Callee {
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
                 noFactoriesSupportingTokenPair++;
             }
@@ -123,7 +123,7 @@ contract DexProvider is IUniswapV2Callee {
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
                 (amms0[j].x, amms0[j].y) = getReserves(
                     _factoryAddresses[i],
@@ -162,7 +162,7 @@ contract DexProvider is IUniswapV2Callee {
             // find an AMM to take a loan out from - this can be any one which we have an X->Y transaction on.
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; i++) {
                 if (amountsToSendToAmms[i].x != 0) {
-                    assert(amountsToSendToAmms[i].y == 0);
+                    require(amountsToSendToAmms[i].y == 0,"Y should be zero");
                     flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[
                         i
                     ];
