@@ -17,7 +17,9 @@ describe("==================================== DexProvider =====================
     });
   });
   beforeEach(async function () {
-    this.dexProvider = await this.DexProvider.deploy();
+    this.dexProvider = await this.DexProvider.deploy(
+      Object.values(factoryToAddress)
+    );
     await this.dexProvider.deployed();
   });
 

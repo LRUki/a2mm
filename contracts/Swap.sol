@@ -24,11 +24,19 @@ contract Swap is DexProvider {
 
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
+    constructor(address[3] memory factoryAddresses)
+        public
+        DexProvider(factoryAddresses)
+    //solhint-disable-next-line
+    {
+
+    }
+
     function swap(
         address tokenIn,
         address tokenOut,
         uint256 amountIn
-    ) public {
+    ) external {
         swapWithSlippage(tokenIn, tokenOut, amountIn, uint256(0));
     }
 
@@ -49,15 +57,9 @@ contract Swap is DexProvider {
             Structs.Amm[] memory amms0;
             (
                 swapHelper.factoriesSupportingTokenPair,
-                amms0
+                amms0,
+                swapHelper.amms1
             ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
-            swapHelper.amms1 = new Structs.Amm[](amms0.length);
-            for (uint256 i = 0; i < amms0.length; i++) {
-                (swapHelper.amms1[i].x, swapHelper.amms1[i].y) = (
-                    amms0[i].x,
-                    amms0[i].y
-                );
-            }
 
             require(
                 swapHelper.factoriesSupportingTokenPair.length > 0,
@@ -159,9 +161,6 @@ contract Swap is DexProvider {
             uint256 noOfXToYSwaps
         )
     {
-        totalOut = 0;
-        ySum = 0;
-        noOfXToYSwaps = 0;
         for (uint256 i = 0; i < amms.length; i++) {
             ySum += arbitrages[i].y;
             if (routes[i] + arbitrages[i].x != 0) {
@@ -193,9 +192,6 @@ contract Swap is DexProvider {
             uint256 noOfXToYSwaps
         )
     {
-        totalOut = 0;
-        ySum = 0;
-        noOfXToYSwaps = 0;
         for (uint256 i = 0; i < amms.length; i++) {
             ySum += amountsToSendToAmms[i].y;
             if (amountsToSendToAmms[i].x != 0) {
@@ -220,16 +216,11 @@ contract Swap is DexProvider {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 totalGain) {
-        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
-            tokenIn,
-            tokenOut
-        );
-
-        // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
-        Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
-        for (uint256 i = 0; i < amms0.length; i++) {
-            (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
-        }
+        (
+            ,
+            Structs.Amm[] memory amms0,
+            Structs.Amm[] memory amms1
+        ) = _factoriesWhichSupportPair(tokenIn, tokenOut);
 
         (
             uint256[] memory routes,
@@ -250,14 +241,11 @@ contract Swap is DexProvider {
         address arbitragingFor,
         address intermediateToken
     ) external view returns (uint256 arbitrageGain, uint256 tokenInRequired) {
-        (, Structs.Amm[] memory amms0) = _factoriesWhichSupportPair(
-            intermediateToken,
-            arbitragingFor
-        );
-        Structs.Amm[] memory amms1 = new Structs.Amm[](amms0.length);
-        for (uint256 i = 0; i < amms0.length; i++) {
-            (amms1[i].x, amms1[i].y) = (amms0[i].x, amms0[i].y);
-        }
+        (
+            ,
+            Structs.Amm[] memory amms0,
+            Structs.Amm[] memory amms1
+        ) = _factoriesWhichSupportPair(intermediateToken, arbitragingFor);
 
         Structs.AmountsToSendToAmm[] memory arbitrages;
         (arbitrages, tokenInRequired) = Arbitrage.arbitrageForY(amms0, 0);
@@ -354,11 +342,6 @@ contract Swap is DexProvider {
         }
         return calculateRouteAndArbitrage(amms, amountOfX);
     }
-
-    //allow contract to recieve eth
-    //not sure if we need it but might as well
-    //solhint-disable-next-line
-    receive() external payable {}
 
     struct SwapHelper {
         Structs.Amm[] amms1;

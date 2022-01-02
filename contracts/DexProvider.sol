@@ -24,18 +24,11 @@ import "hardhat/console.sol";
 contract DexProvider is IUniswapV2Callee {
     event ExecuteSwapEvent(uint256 amountIn, uint256 amountOut);
 
-    address internal constant _UNIV2_FACTORY_ADDRESS =
-        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address internal constant _SUSHI_FACTORY_ADDRESS =
-        0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
-    address internal constant _SHIBA_FACTORY_ADDRESS =
-        0x115934131916C8b277DD010Ee02de363c09d037c;
+    address[3] private _factoryAddresses;
 
-    address[3] internal _factoryAddresses = [
-        _UNIV2_FACTORY_ADDRESS,
-        _SUSHI_FACTORY_ADDRESS,
-        _SHIBA_FACTORY_ADDRESS
-    ];
+    constructor(address[3] memory factoryAddresses) public {
+        _factoryAddresses = factoryAddresses;
+    }
 
     function getReserves(
         address factoryAddress,
@@ -103,47 +96,44 @@ contract DexProvider is IUniswapV2Callee {
         view
         returns (
             address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
+            Structs.Amm[] memory amms0,
+            Structs.Amm[] memory amms1
         )
     {
-        uint256 noFactoriesSupportingTokenPair = 0;
+        uint256 noFactoriesSupportingTokenPair;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
                 noFactoriesSupportingTokenPair++;
             }
         }
 
-        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms0 = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms1 = new Structs.Amm[](noFactoriesSupportingTokenPair);
         factoriesSupportingTokenPair = new address[](
             noFactoriesSupportingTokenPair
         );
         uint256 j = 0;
-        for (
-            uint256 i = 0;
-            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
-            i++
-        ) {
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
-                ) != address(0x0)
+                ) != address(0)
             ) {
-                (amms[j].x, amms[j].y) = getReserves(
+                (amms0[j].x, amms0[j].y) = getReserves(
                     _factoryAddresses[i],
                     tokenIn,
                     tokenOut
                 );
+                (amms1[j].x, amms1[j].y) = (amms0[j].x, amms0[j].y);
                 factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
             }
         }
-
-        return (factoriesSupportingTokenPair, amms);
     }
 
     struct FlashSwapHelper {
@@ -172,7 +162,7 @@ contract DexProvider is IUniswapV2Callee {
             // find an AMM to take a loan out from - this can be any one which we have an X->Y transaction on.
             for (uint256 i = 0; i < factoriesSupportingTokenPair.length; i++) {
                 if (amountsToSendToAmms[i].x != 0) {
-                    assert(amountsToSendToAmms[i].y == 0);
+                    require(amountsToSendToAmms[i].y == 0,"Y should be zero");
                     flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[
                         i
                     ];
@@ -200,7 +190,7 @@ contract DexProvider is IUniswapV2Callee {
             );
             Structs.Amm[] memory newAmms = new Structs.Amm[](amms.length - 1);
             {
-                uint256 j = 0;
+                uint256 j;
                 for (uint256 i = 0; i < amountsToSendToAmms.length; i++) {
                     if (
                         factoriesSupportingTokenPair[i] !=

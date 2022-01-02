@@ -110,9 +110,9 @@ library Route {
             //TODO: for some reason we can't pass array slices as function arguments, so have to create an array with the slice each time. Can this be done more efficiently?
             routeHelper.leveledAmms = new Structs.Amm[](amms.length - j);
             for (uint256 k = 0; k < routeHelper.leveledAmms.length; ++k) {
-                routeHelper.leveledAmms[routeHelper.leveledAmms.length - 1 - k] = amms[
-                    routeHelper.sortedIndices[amms.length - 1 - k]
-                ];
+                routeHelper.leveledAmms[
+                    routeHelper.leveledAmms.length - 1 - k
+                ] = amms[routeHelper.sortedIndices[amms.length - 1 - k]];
             }
 
             routeHelper.splits = SharedFunctions.howToSplitRoutingOnLeveledAmms(
