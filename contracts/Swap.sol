@@ -20,8 +20,6 @@ import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
 import "hardhat/console.sol";
 
 contract Swap is DexProvider {
-    Structs.AmountsToSendToAmm[3] private _amountsToSendToAmm;
-
     event SwapEvent(uint256 amountIn, uint256 amountOut);
 
     constructor(address[3] memory factoryAddresses)
