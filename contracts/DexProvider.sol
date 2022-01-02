@@ -96,10 +96,11 @@ contract DexProvider is IUniswapV2Callee {
         view
         returns (
             address[] memory factoriesSupportingTokenPair,
-            Structs.Amm[] memory amms
+            Structs.Amm[] memory amms0,
+            Structs.Amm[] memory amms1
         )
     {
-        uint256 noFactoriesSupportingTokenPair = 0;
+        uint256 noFactoriesSupportingTokenPair;
         for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
@@ -111,32 +112,28 @@ contract DexProvider is IUniswapV2Callee {
             }
         }
 
-        amms = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms0 = new Structs.Amm[](noFactoriesSupportingTokenPair);
+        amms1 = new Structs.Amm[](noFactoriesSupportingTokenPair);
         factoriesSupportingTokenPair = new address[](
             noFactoriesSupportingTokenPair
         );
         uint256 j = 0;
-        for (
-            uint256 i = 0;
-            i < _factoryAddresses.length && j < noFactoriesSupportingTokenPair;
-            i++
-        ) {
+        for (uint256 i = 0; i < _factoryAddresses.length; i++) {
             if (
                 IUniswapV2Factory(_factoryAddresses[i]).getPair(
                     tokenIn,
                     tokenOut
                 ) != address(0x0)
             ) {
-                (amms[j].x, amms[j].y) = getReserves(
+                (amms0[j].x, amms0[j].y) = getReserves(
                     _factoryAddresses[i],
                     tokenIn,
                     tokenOut
                 );
+                (amms1[j].x, amms1[j].y) = (amms0[j].x, amms0[j].y);
                 factoriesSupportingTokenPair[j++] = _factoryAddresses[i];
             }
         }
-
-        return (factoriesSupportingTokenPair, amms);
     }
 
     struct FlashSwapHelper {
@@ -193,7 +190,7 @@ contract DexProvider is IUniswapV2Callee {
             );
             Structs.Amm[] memory newAmms = new Structs.Amm[](amms.length - 1);
             {
-                uint256 j = 0;
+                uint256 j;
                 for (uint256 i = 0; i < amountsToSendToAmms.length; i++) {
                     if (
                         factoriesSupportingTokenPair[i] !=
