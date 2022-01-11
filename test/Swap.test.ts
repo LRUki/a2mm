@@ -220,15 +220,21 @@ describe("==================================== Swap ============================
   };
 
   const swapTestCases: SwapTestCaseParam[] = [];
+  swapTestCases.push([
+    Number(13680600),
+    [Token.WETH, Token.SHIBA],
+    ethers.utils.parseEther("5"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
+  swapTestCases.push([
+    Number(13680700),
+    [Token.WETH, Token.SHIBA],
+    ethers.utils.parseEther("5"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
   for (let i = 0; i < 10; i++) {
-    swapTestCases.push([
-      Number(13679900 + 100 * i),
-      [Token.WETH, Token.UNI],
-      ethers.utils.parseEther("0.1"),
-      ethers.utils.parseEther("0.1"),
-    ] as SwapTestCaseParam);
-  }
-  for (let i = 0; i < 5; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
       [Token.WETH, Token.UNI],
@@ -236,6 +242,14 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+
+  swapTestCases.push([
+    Number(13688900),
+    [Token.WETH, Token.UNI],
+    ethers.utils.parseEther("0.1"),
+    ethers.utils.parseEther("0.1"),
+  ] as SwapTestCaseParam);
+
   for (let i = 0; i < 3; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
@@ -244,6 +258,7 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+
   for (let i = 0; i < 3; i++) {
     swapTestCases.push([
       Number(13679900 + 100 * i),
@@ -252,8 +267,16 @@ describe("==================================== Swap ============================
       ethers.utils.parseEther("0.1"),
     ] as SwapTestCaseParam);
   }
+
+  for (let i = 0; i < 10; i++) {
+    swapTestCases.push([
+      Number(13679900 + 100 * i),
+      [Token.WETH, Token.UNI],
+      ethers.utils.parseEther("0.1"),
+      ethers.utils.parseEther("0.1"),
+    ] as SwapTestCaseParam);
+  }
   let worseCases = 0;
-  let totalGas: BigNumber = BigNumber.from(0);
   let totalUserRecievedAmount: BigNumber = BigNumber.from(0);
   swapTestCases.forEach((swapTestCase, i) => {
     const [blockNumber, [tokenIn, tokenOut], amountIn, expectedAmountOut] =
@@ -310,8 +333,6 @@ describe("==================================== Swap ============================
         amountIn
       );
       const txStatus = await tx.wait();
-      totalGas = totalGas.add(txStatus.gasUsed);
-      console.log(totalGas.toString(), "TOTAL GAS");
       const userRecievedAmount: BigNumber = await getBalanceOfERC20(
         signer.address,
         tokenToAddress[tokenOut]
@@ -323,7 +344,7 @@ describe("==================================== Swap ============================
         console.log(
           `At ${factory}, we would get ${amountOut.toString()} of ${tokenOut} (reserves[${reserveIn.toString()},${reserveOut.toString()}])`
         );
-        if (userRecievedAmount.toString() < amountOut.toString()) {
+        if (userRecievedAmount.toBigInt() < amountOut) {
           isBetter = false;
         }
       });

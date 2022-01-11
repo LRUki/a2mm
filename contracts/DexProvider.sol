@@ -6,18 +6,14 @@ pragma experimental ABIEncoderV2;
 
 import "./libraries/Structs.sol";
 import "./libraries/SharedFunctions.sol";
+import "./libraries/SharedFunctions.sol";
+import "./libraries/IERC20.sol";
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
 import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
-
-import "@uniswap/v2-periphery/contracts/interfaces/V1/IUniswapV1Exchange.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
 
 import "hardhat/console.sol";
 
@@ -73,7 +69,7 @@ contract DexProvider is IUniswapV2Callee {
             reserveIn,
             reserveOut
         );
-        IERC20(tokenIn).transfer(pairAddress, amountIn);
+        TransferHelper.safeTransfer(tokenIn, pairAddress, amountIn);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
             ? (uint256(0), amountOut)
             : (amountOut, uint256(0));
@@ -136,115 +132,54 @@ contract DexProvider is IUniswapV2Callee {
         }
     }
 
-    struct FlashSwapHelper {
-        bytes data;
-        address whereToLoan;
-        uint256 yToLoan;
-        uint256 whereToLoanIndex;
-        address[] newFactoriesSupportingTokenPair;
-        Structs.AmountsToSendToAmm[] newAmountsToSendToAmms;
+    struct XTxn {
+        uint256 x;
+        address factory;
+        Structs.Amm amm;
+    }
+
+    struct YTxn {
+        uint256 y;
+        address factory;
+        Structs.Amm amm;
     }
 
     function flashSwap(
         address tokenIn,
         address tokenOut,
-        uint256 amountIn,
         uint256 noOfXToYSwapsLeft,
-        address[] memory factoriesSupportingTokenPair,
-        Structs.AmountsToSendToAmm[] memory amountsToSendToAmms,
-        Structs.Amm[] memory amms,
-        uint256[] memory xToYSwaps,
-        address[] memory xToYSwapsFactories
+        XTxn[] memory xTxns,
+        YTxn[] memory yTxns
     ) public {
-        FlashSwapHelper memory flashSwapHelper;
-        flashSwapHelper.whereToLoan = address(0);
-        {
-            // find an AMM to take a loan out from - this can be any one which we have an X->Y transaction on.
-            for (uint256 i = 0; i < factoriesSupportingTokenPair.length; i++) {
-                if (amountsToSendToAmms[i].x != 0) {
-                    require(amountsToSendToAmms[i].y == 0,"Y should be zero");
-                    flashSwapHelper.whereToLoan = factoriesSupportingTokenPair[
-                        i
-                    ];
-                    flashSwapHelper.whereToLoanIndex = i;
-                    break;
-                }
-            }
-            require(
-                flashSwapHelper.whereToLoan != address(0),
-                "no AMMs left; insufficient loan"
-            );
-            // determine how big the loan needs to be
-            flashSwapHelper.yToLoan = SharedFunctions.quantityOfYForX(
-                amms[flashSwapHelper.whereToLoanIndex],
-                amountsToSendToAmms[flashSwapHelper.whereToLoanIndex].x
-            );
+        XTxn memory whereToLoan = xTxns[noOfXToYSwapsLeft - 1];
+        require(
+            whereToLoan.factory != address(0),
+            "no AMMs left; insufficient loan"
+        );
+        // determine how big the loan needs to be
+        uint256 yToLoan = SharedFunctions.quantityOfYForX(
+            whereToLoan.amm,
+            whereToLoan.x
+        );
 
-            // filter out the AMM which we will be borrowing from next
-            flashSwapHelper.newFactoriesSupportingTokenPair = new address[](
-                factoriesSupportingTokenPair.length - 1
-            );
-            flashSwapHelper
-                .newAmountsToSendToAmms = new Structs.AmountsToSendToAmm[](
-                amountsToSendToAmms.length - 1
-            );
-            Structs.Amm[] memory newAmms = new Structs.Amm[](amms.length - 1);
-            {
-                uint256 j;
-                for (uint256 i = 0; i < amountsToSendToAmms.length; i++) {
-                    if (
-                        factoriesSupportingTokenPair[i] !=
-                        flashSwapHelper.whereToLoan
-                    ) {
-                        flashSwapHelper.newFactoriesSupportingTokenPair[
-                                j
-                            ] = factoriesSupportingTokenPair[i];
-                        newAmms[j] = amms[i];
-                        flashSwapHelper.newAmountsToSendToAmms[
-                                j++
-                            ] = amountsToSendToAmms[i];
-                    }
-                }
-            }
+        bytes memory data = abi.encode(--noOfXToYSwapsLeft, xTxns, yTxns);
 
-            noOfXToYSwapsLeft--;
-            flashSwapHelper.data = abi.encode(
-                flashSwapHelper.newFactoriesSupportingTokenPair,
-                flashSwapHelper.newAmountsToSendToAmms,
-                newAmms,
-                amountIn,
-                noOfXToYSwapsLeft,
-                xToYSwaps,
-                xToYSwapsFactories
-            );
-        }
-
-        address pairAddress = IUniswapV2Factory(flashSwapHelper.whereToLoan)
-            .getPair(tokenIn, tokenOut);
+        address pairAddress = IUniswapV2Factory(whereToLoan.factory).getPair(
+            tokenIn,
+            tokenOut
+        );
 
         (address token0, ) = UniswapV2Library.sortTokens(tokenIn, tokenOut);
         (uint256 amount0Out, uint256 amount1Out) = token0 == tokenIn
-            ? (uint256(0), flashSwapHelper.yToLoan)
-            : (flashSwapHelper.yToLoan, uint256(0));
+            ? (uint256(0), yToLoan)
+            : (yToLoan, uint256(0));
 
         IUniswapV2Pair(pairAddress).swap(
             amount0Out,
             amount1Out,
             address(this),
-            flashSwapHelper.data
+            data
         );
-    }
-
-    struct V2CallHelper {
-        address tokenIn;
-        address tokenOut;
-        Structs.AmountsToSendToAmm[] amountsToSendToAmms;
-        address[] factoriesSupportingTokenPair;
-        uint256 amountIn;
-        uint256 noOfXToYSwapsLeft;
-        Structs.Amm[] amms;
-        uint256[] xToYSwaps;
-        address[] xToYSwapsFactories;
     }
 
     function uniswapV2Call(
@@ -259,70 +194,34 @@ contract DexProvider is IUniswapV2Callee {
             "flash loan invalid"
         );
 
-        V2CallHelper memory v2CallHelper;
         (
-            v2CallHelper.factoriesSupportingTokenPair,
-            v2CallHelper.amountsToSendToAmms,
-            v2CallHelper.amms,
-            v2CallHelper.amountIn,
-            v2CallHelper.noOfXToYSwapsLeft,
-            v2CallHelper.xToYSwaps,
-            v2CallHelper.xToYSwapsFactories
-        ) = abi.decode(
-            data,
-            (
-                address[],
-                Structs.AmountsToSendToAmm[],
-                Structs.Amm[],
-                uint256,
-                uint256,
-                uint256[],
-                address[]
-            )
-        );
+            uint256 noOfXToYSwapsLeft,
+            XTxn[] memory xTxns,
+            YTxn[] memory yTxns
+        ) = abi.decode(data, (uint256, XTxn[], YTxn[]));
 
         address token0 = IUniswapV2Pair(msg.sender).token0();
         address token1 = IUniswapV2Pair(msg.sender).token1();
 
-        (v2CallHelper.tokenIn, v2CallHelper.tokenOut) = amount0Out == 0
+        (address tokenIn, address tokenOut) = amount0Out == 0
             ? (token0, token1)
             : (token1, token0);
 
-        if (v2CallHelper.noOfXToYSwapsLeft > 0) {
+        if (noOfXToYSwapsLeft > 0) {
             // We (possibly) have insufficient Y, so need to also take a loan out somewhere else.
-            flashSwap(
-                v2CallHelper.tokenIn,
-                v2CallHelper.tokenOut,
-                v2CallHelper.amountIn,
-                v2CallHelper.noOfXToYSwapsLeft,
-                v2CallHelper.factoriesSupportingTokenPair,
-                v2CallHelper.amountsToSendToAmms,
-                v2CallHelper.amms,
-                v2CallHelper.xToYSwaps,
-                v2CallHelper.xToYSwapsFactories
-            );
+            flashSwap(tokenIn, tokenOut, noOfXToYSwapsLeft, xTxns, yTxns);
             return;
         }
 
-        for (uint256 i = 0; i < v2CallHelper.amountsToSendToAmms.length; i++) {
-            if (v2CallHelper.amountsToSendToAmms[i].y != 0) {
-                executeSwap(
-                    v2CallHelper.factoriesSupportingTokenPair[i],
-                    v2CallHelper.tokenOut,
-                    v2CallHelper.tokenIn,
-                    v2CallHelper.amountsToSendToAmms[i].y
-                );
-            }
+        for (uint256 i = 0; i < yTxns.length; i++) {
+            executeSwap(yTxns[i].factory, tokenOut, tokenIn, yTxns[i].y);
         }
 
-        for (uint256 i = 0; i < v2CallHelper.xToYSwaps.length; i++) {
+        for (uint256 i = 0; i < xTxns.length; i++) {
             TransferHelper.safeTransfer(
-                v2CallHelper.tokenIn,
-                IUniswapV2Factory(v2CallHelper.xToYSwapsFactories[i]).getPair(
-                    token0,
-                    token1
-                ),
-                v2CallHelper.xToYSwaps[i]
+                tokenIn,
+                IUniswapV2Factory(xTxns[i].factory).getPair(token0, token1),
+                xTxns[i].x
             );
         }
     }

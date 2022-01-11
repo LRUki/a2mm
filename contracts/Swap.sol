@@ -8,16 +8,9 @@ import "./libraries/Structs.sol";
 import "./libraries/Arbitrage.sol";
 import "./libraries/Route.sol";
 import "./libraries/SharedFunctions.sol";
-import "./interfaces/IWETH9.sol";
 import "./DexProvider.sol";
 
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IERC20.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract Swap is DexProvider {
     event SwapEvent(uint256 amountIn, uint256 amountOut);
@@ -44,9 +37,11 @@ contract Swap is DexProvider {
         uint256 amountIn,
         uint256 minimumAcceptedAmount
     ) public {
-        require(
-            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn),
-            "user needs to approve"
+        TransferHelper.safeTransferFrom(
+            tokenIn,
+            msg.sender,
+            address(this),
+            amountIn
         );
 
         // Copy the list of AMMs as internal calls are done by reference, and hence can edit the amms0 array
@@ -73,7 +68,8 @@ contract Swap is DexProvider {
         (
             swapHelper.amountOut,
             swapHelper.ySum,
-            swapHelper.noOfXToYSwaps
+            swapHelper.noOfXToYSwaps,
+            swapHelper.noOfYToXSwaps
         ) = _calculateTotalYOut(
             swapHelper.amms1,
             swapHelper.amountsToSendToAmms
@@ -84,34 +80,33 @@ contract Swap is DexProvider {
         );
 
         if (swapHelper.ySum > 0) {
-            swapHelper.xToYSwaps = new uint256[](swapHelper.noOfXToYSwaps);
-            swapHelper.xToYSwapsFactories = new address[](
-                swapHelper.noOfXToYSwaps
-            );
+            XTxn[] memory xTxns = new XTxn[](swapHelper.noOfXToYSwaps);
+            YTxn[] memory yTxns = new YTxn[](swapHelper.noOfYToXSwaps);
             uint256 j = 0;
+            uint256 k = 0;
             for (uint256 i = 0; i < swapHelper.amms1.length; i++) {
                 if (swapHelper.amountsToSendToAmms[i].x != 0) {
                     require(
                         swapHelper.amountsToSendToAmms[i].y == 0,
                         "Can't swap both X and Y"
                     );
-                    swapHelper.xToYSwaps[j] = swapHelper
-                        .amountsToSendToAmms[i]
-                        .x;
-                    swapHelper.xToYSwapsFactories[j++] = swapHelper
+                    xTxns[j].x = swapHelper.amountsToSendToAmms[i].x;
+                    xTxns[j].amm = swapHelper.amms1[i];
+                    xTxns[j++].factory = swapHelper
+                        .factoriesSupportingTokenPair[i];
+                } else if (swapHelper.amountsToSendToAmms[i].y != 0) {
+                    yTxns[k].y = swapHelper.amountsToSendToAmms[i].y;
+                    yTxns[k].amm = swapHelper.amms1[i];
+                    yTxns[k++].factory = swapHelper
                         .factoriesSupportingTokenPair[i];
                 }
             }
             flashSwap(
                 tokenIn,
                 tokenOut,
-                amountIn,
                 swapHelper.noOfXToYSwaps,
-                swapHelper.factoriesSupportingTokenPair,
-                swapHelper.amountsToSendToAmms,
-                swapHelper.amms1,
-                swapHelper.xToYSwaps,
-                swapHelper.xToYSwapsFactories
+                xTxns,
+                yTxns
             );
         } else {
             for (
@@ -134,10 +129,7 @@ contract Swap is DexProvider {
             IERC20(tokenOut).balanceOf(address(this)) == swapHelper.amountOut,
             "Predicted amountOut != actual"
         );
-        require(
-            IERC20(tokenOut).transfer(msg.sender, swapHelper.amountOut),
-            "token failed to be sent back"
-        );
+        TransferHelper.safeTransfer(tokenOut, msg.sender, swapHelper.amountOut);
         emit SwapEvent(amountIn, swapHelper.amountOut);
     }
 
@@ -187,7 +179,8 @@ contract Swap is DexProvider {
         returns (
             uint256 totalOut,
             uint256 ySum,
-            uint256 noOfXToYSwaps
+            uint256 noOfXToYSwaps,
+            uint256 noOfYToXSwaps
         )
     {
         for (uint256 i = 0; i < amms.length; i++) {
@@ -198,6 +191,8 @@ contract Swap is DexProvider {
                     amms[i],
                     amountsToSendToAmms[i].x
                 );
+            } else if (amountsToSendToAmms[i].y != 0) {
+                noOfYToXSwaps += 1;
             }
         }
 
@@ -348,7 +343,10 @@ contract Swap is DexProvider {
         address[] factoriesSupportingTokenPair;
         Structs.AmountsToSendToAmm[] amountsToSendToAmms;
         uint256 noOfXToYSwaps;
+        uint256 noOfYToXSwaps;
         uint256[] xToYSwaps;
         address[] xToYSwapsFactories;
+        uint256[] yToXSwaps;
+        address[] yToXSwapsFactories;
     }
 }

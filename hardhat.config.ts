@@ -2,7 +2,7 @@
  * @type import('hardhat/config').HardhatUserConfig
  */
 import "@nomiclabs/hardhat-waffle";
-import "@openzeppelin/hardhat-upgrades";
+import "hardhat-gas-reporter";
 import { mnemonic, url } from "./secret.json";
 
 export default {
@@ -39,5 +39,9 @@ export default {
       url: url,
       accounts: { mnemonic: mnemonic },
     },
+  },
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
   },
 };

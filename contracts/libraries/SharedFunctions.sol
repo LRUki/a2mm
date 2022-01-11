@@ -238,4 +238,30 @@ library SharedFunctions {
             }
         }
     }
+
+    //left and right is a pointer to the array [left, right)
+    function howToSplitRoutingOnLeveledAmms(
+        Structs.Amm[] calldata amms,
+        uint256 delta,
+        uint256 left,
+        uint256 right
+    ) external pure returns (uint256[] memory splits) {
+        splits = new uint256[](right - left);
+
+        uint256 sumX = 0;
+        uint256 sumY = 0;
+        for (uint256 i = left; i < right; ++i) {
+            sumX += amms[i].x;
+            sumY += amms[i].y;
+        }
+        if (sumX < sumY) {
+            for (uint256 i = left; i < right; ++i) {
+                splits[i - left] = (amms[i].x * delta) / sumX;
+            }
+        } else {
+            for (uint256 i = left; i < right; ++i) {
+                splits[i - left] = (amms[i].y * delta) / sumY;
+            }
+        }
+    }
 }
