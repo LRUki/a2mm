@@ -1,13 +1,13 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { Token, tokenToAddress } from "../scripts/utils/Token";
+import { Token, tokenToAddress } from "../scripts/utils/token";
 import {
   getBalanceOfERC20,
   convertEthToWETH,
   sendERC20,
 } from "../scripts/utils/ERC20";
 import { BigNumber } from "@ethersproject/bignumber";
-import { Factory, factoryToAddress } from "../scripts/utils/Factory";
+import { Factory, factoryToAddress } from "../scripts/utils/factory";
 import deployContract from "../scripts/utils/deploy";
 describe("==================================== DexProvider ====================================", function () {
   before(async function () {

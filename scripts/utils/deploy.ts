@@ -12,11 +12,9 @@ export default async (
   const Contract = await ethers.getContractFactory(contractName, {
     libraries,
   });
-  // console.log(`Deploying ${contractName}`);
   const contract = await Contract.deploy(args);
 
   await contract.deployed();
-  // console.log(`${contractName} deployed to`, contract.address);
 
   return contract.address;
 };

@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { Token, tokenToAddress } from "../scripts/utils/Token";
+import { Token, tokenToAddress } from "../scripts/utils/token";
 import {
   getBalanceOfERC20,
   topUpWETHAndApproveContractToUse,
@@ -16,7 +16,7 @@ import forkAndDeploy from "../scripts/utils/forkAndDeploy";
 
 import deployContract from "../scripts/utils/deploy";
 import { BigNumber } from "@ethersproject/bignumber";
-import { Factory, factoryToAddress } from "../scripts/utils/Factory";
+import { Factory, factoryToAddress } from "../scripts/utils/factory";
 
 describe("==================================== Swap Helpers ====================================", function () {
   before(async function () {

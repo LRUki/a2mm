@@ -2,7 +2,7 @@ import { network, ethers } from "hardhat";
 import deployContract from "./deploy";
 import { Libraries } from "hardhat/types";
 import { Contract } from "@ethersproject/contracts";
-import { factoryToAddress } from "./Factory";
+import { factoryToAddress } from "./factory";
 //forks at given blocknumber, deploy the swap contract
 //and returns the contract instance
 export default async (blockNumber: number): Promise<Contract> => {

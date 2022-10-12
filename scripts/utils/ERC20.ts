@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { assert } from "chai";
-import { Token, tokenToAddress } from "./Token";
+import { Token, tokenToAddress } from "./token";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "@ethersproject/bignumber";
 
